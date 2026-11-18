@@ -8,6 +8,7 @@ import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
 import { formatRange, formatShort } from '@/lib/date';
 import { getArtist } from '@/mocks/artists';
+import { isLoggedIn, pickedSlotIds } from '@/mocks/session';
 import { CATEGORY_LABEL, DEFAULT_TIME_ZONE, getShow, getTicketStatus, MOCK_TODAY, shows } from '@/mocks/shows';
 
 export function generateStaticParams() {
@@ -77,7 +78,16 @@ function ShowDetail({ id }: { id: string }) {
           <SectionTitle title="Timetable" sub={show.timetable ? '눌러서 미리 듣고, 하트로 담아보세요' : undefined} />
           <div className="mt-3">
             {show.timetable ? (
-              <Timetable showId={show.id} title={show.title} venue={show.venue} timeZone={show.timeZone ?? DEFAULT_TIME_ZONE} stages={show.timetable.stages} slots={show.timetable.slots} artists={lineup} />
+              <Timetable
+                showId={show.id}
+                title={show.title}
+                venue={show.venue}
+                timeZone={show.timeZone ?? DEFAULT_TIME_ZONE}
+                stages={show.timetable.stages}
+                slots={show.timetable.slots}
+                artists={lineup}
+                initialPicked={isLoggedIn ? pickedSlotIds[show.id] : undefined}
+              />
             ) : (
               <p className="border border-black px-3 py-6 text-center text-sm">시간표는 공개되는 대로 알려드릴게요.</p>
             )}

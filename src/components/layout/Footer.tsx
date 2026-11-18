@@ -23,7 +23,7 @@ export default function Footer() {
           <Link href="https://www.instagram.com/" target="_blank" rel="noreferrer">
             Instagram
           </Link>
-          <Link href="#">공연 제보하기</Link>
+          <Link href="/report">공연 제보하기</Link>
         </div>
         <span>© febble</span>
       </div>

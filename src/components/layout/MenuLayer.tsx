@@ -67,7 +67,7 @@ export default function MenuLayer({ isOpen, onClose }: Props) {
 
       <div className="flex flex-col gap-3 border-t border-black px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         {isLoggedIn ? (
-          <Link href="#" onClick={onClose} className="flex h-11 items-center justify-center rounded-lg border border-black text-sm">
+          <Link href="/me" onClick={onClose} className="flex h-11 items-center justify-center rounded-lg border border-black text-sm">
             마이페이지
           </Link>
         ) : (
@@ -82,7 +82,7 @@ export default function MenuLayer({ isOpen, onClose }: Props) {
             로그인
           </button>
         )}
-        <Link href="#" onClick={onClose} className="text-center text-xs underline underline-offset-2">
+        <Link href="/report" onClick={onClose} className="text-center text-xs underline underline-offset-2">
           공연 제보하기
         </Link>
       </div>

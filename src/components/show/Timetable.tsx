@@ -21,19 +21,21 @@ type Props = {
   stages: Stage[];
   slots: TimetableSlot[];
   artists: Artist[];
+  /** 이미 저장된 내 타임테이블 (로그인 사용자) */
+  initialPicked?: string[];
 };
 
 const HOUR_HEIGHT = 64; // px
 
 // 날짜 탭 → 무대별 세로 시간표. 공연 칸을 누르면 내 타임테이블에 담긴다(노란색).
-export default function Timetable({ showId, title, venue, timeZone, stages, slots, artists }: Props) {
+export default function Timetable({ showId, title, venue, timeZone, stages, slots, artists, initialPicked = [] }: Props) {
   const artistNames = Object.fromEntries(artists.map((artist) => [artist.id, artist.name]));
   // 미리듣기 시트: 닫는 동안에도 내용이 남도록 마지막 칸 id 는 유지하고 열림 여부만 바꾼다.
   const [previewSlotId, setPreviewSlotId] = useState<string>();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const dates = [...new Set(slots.map((slot) => slot.date))].sort();
   const [date, setDate] = useState(dates[0]);
-  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(initialPicked));
   const openLoginSheet = useOpenLoginSheet();
 
   const daySlots = slots.filter((slot) => slot.date === date);

@@ -29,9 +29,9 @@ export default function Header() {
         <Image src="/images/icon/flag2.svg" alt="" width={22} height={17} style={{ marginTop: '1px' }} />
       </Link>
       <div className="flex items-center gap-3">
-        <button type="button" aria-label="검색">
+        <Link href="/search" aria-label="검색">
           <Image src="/images/icon/search.svg" alt="" width={16} height={16} />
-        </button>
+        </Link>
         <button type="button" aria-label="메뉴" aria-expanded={isMenuOpen} onClick={() => setIsMenuOpen(true)}>
           <Image src="/images/icon/menu.svg" alt="" width={16} height={12} />
         </button>
