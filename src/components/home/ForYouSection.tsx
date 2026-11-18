@@ -11,7 +11,7 @@ export default function ForYouSection() {
         <SectionTitle title="For you" />
         <div className="mt-2 flex items-center justify-between text-xs">
           <span>팔로우한 아티스트 소식</span>
-          <Link href="#" className="underline underline-offset-2">
+          <Link href="/me/following" className="underline underline-offset-2">
             더보기
           </Link>
         </div>
@@ -19,14 +19,16 @@ export default function ForYouSection() {
 
       <ul>
         {followedArtistNews.map((item) => (
-          <li key={item.id} className="relative flex items-center gap-4 border-t border-black px-3 py-3">
-            <Thumb src={item.image} alt={item.name} className="size-14 rounded-full" />
-            <div>
-              <p className="font-medium tracking-[-0.04em]">{item.name}</p>
-              <p className="text-xs">
-                {item.date} · {item.venue}
-              </p>
-            </div>
+          <li key={item.id} className="relative border-t border-black">
+            <Link href={`/shows/${item.id}`} className="flex items-center gap-4 px-3 py-3">
+              <Thumb src={item.image} alt={item.name} className="size-14 rounded-full" />
+              <div>
+                <p className="font-medium tracking-[-0.04em]">{item.name}</p>
+                <p className="text-xs">
+                  {item.date} · {item.venue}
+                </p>
+              </div>
+            </Link>
             {item.badge && (
               <div className="absolute top-3 right-3">
                 <Badge type={item.badge.type}>{item.badge.label}</Badge>
@@ -41,11 +43,13 @@ export default function ForYouSection() {
         <ul className="mt-3 grid grid-cols-2 gap-2">
           {recommendation.shows.map((show) => (
             <li key={show.id}>
-              <Thumb src={show.image} alt={show.title} className="aspect-square w-full" />
-              <p className="mt-3 text-lg leading-tight font-medium tracking-[-0.04em]">{show.title}</p>
-              <p className="mt-1 text-[11px]">
-                {show.date} · {show.venue}
-              </p>
+              <Link href={`/shows/${show.id}`}>
+                <Thumb src={show.image} alt={show.title} className="aspect-square w-full" />
+                <p className="mt-3 text-lg leading-tight font-medium tracking-[-0.04em]">{show.title}</p>
+                <p className="mt-1 text-[11px]">
+                  {show.date} · {show.venue}
+                </p>
+              </Link>
             </li>
           ))}
         </ul>

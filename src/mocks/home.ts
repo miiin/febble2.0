@@ -1,5 +1,6 @@
 // 홈 화면 mock 데이터. DB 연결 전까지 사용한다.
 // image 가 없으면 회색 플레이스홀더로 그린다. 피그마에서 받은 이미지는 public/images 에 두고 경로를 넣는다.
+// 각 항목의 id 는 mocks/shows.ts 의 공연 id 와 같다 (/shows/[id] 로 연결).
 
 export type Badge = 'new' | 'open-soon' | 'pick';
 
@@ -11,10 +12,6 @@ export type Show = {
   venue: string;
   image?: string;
   isToday?: boolean;
-};
-
-export type Pick = Show & {
-  curator: string;
 };
 
 export type FollowedArtistNews = {
@@ -43,68 +40,30 @@ export type Festival = {
   image?: string;
 };
 
-export const pickIssue: { vol: number; main: Pick; others: Show[] } = {
-  vol: 12,
-  main: {
-    id: 'pick-1',
-    title: 'wednesday',
-    description: '슈게이즈 굉음 위로 컨츄리 기타가 긁고 지나간다. 눅눅한데 이상하게 건조한 밴드.\n이 공연장에 오는 사람들은 서로 알아볼 거다.',
-    date: '17 DEC — 20 DEC',
-    venue: '롤링홀',
-    curator: 'ming',
-  },
-  others: [
-    {
-      id: 'pick-2',
-      title: '이태훈 솔로 앨범 음감회',
-      description: '신당동의 작은 스피커 스튜디오에서 새 앨범에 대해 곡마다 이야기합니다.',
-      date: '23 DEC',
-      venue: '롤링홀',
-    },
-    {
-      id: 'pick-3',
-      title: '이태훈 솔로 앨범 음감회',
-      description: '신당동의 작은 스피커 스튜디오에서 새 앨범에 대해 곡마다 이야기합니다.',
-      date: '23 DEC',
-      venue: '롤링홀',
-      isToday: true,
-    },
-    {
-      id: 'pick-4',
-      title: '이태훈 솔로 앨범 음감회',
-      description: '신당동의 작은 스피커 스튜디오에서 새 앨범에 대해 곡마다 이야기합니다.',
-      date: '23 DEC',
-      venue: '롤링홀',
-    },
-  ],
-};
-
 export const followedArtistNews: FollowedArtistNews[] = [
-  { id: 'fa-1', name: '봉제인간', date: '23 DEC', venue: '롤링홀', badge: { type: 'new', label: '새공연' } },
-  { id: 'fa-2', name: '봉제인간', date: '23 DEC', venue: '롤링홀', badge: { type: 'open-soon', label: '오픈 D-3' } },
-  { id: 'fa-3', name: '봉제인간', date: '23 DEC', venue: '롤링홀' },
+  { id: 'bongje-solo', name: '봉제인간', date: '23 DEC', venue: '롤링홀', badge: { type: 'new', label: '새공연' } },
+  { id: 'silica-gel-live', name: '실리카겔', date: '28 DEC — 29 DEC', venue: '예스24 라이브홀', badge: { type: 'open-soon', label: '오픈 D-1' } },
+  { id: 'hanroro-solo', name: '한로로', date: '5 DEC — 6 DEC', venue: '무신사 개러지' },
 ];
 
 export const recommendation: { basedOn: string; shows: Show[] } = {
   basedOn: '봉제인간',
   shows: [
-    { id: 'rec-1', title: '주혜린', date: '17 DEC — 20 DEC', venue: '롤링홀' },
-    { id: 'rec-2', title: 'vulfpeck', date: '17 DEC — 20 DEC', venue: '롤링홀' },
+    { id: 'joo-hyerin-live', title: '주혜린', date: '17 DEC — 20 DEC', venue: '롤링홀' },
+    { id: 'vulfpeck-seoul', title: 'Vulfpeck', date: '20 JAN', venue: '올림픽홀' },
   ],
 };
 
 export const newShows: NewShow[] = [
-  { id: 'new-1', date: '11.23(수)', title: 'SUMIN', venue: '롤링홀', badge: { type: 'pick', label: 'PICK' } },
-  { id: 'new-2', date: '11.23(수)', title: 'SUMIN', venue: '롤링홀' },
-  { id: 'new-3', date: '11.23(수)', title: 'SUMIN', venue: '롤링홀', badge: { type: 'open-soon', label: '오픈 D-3' } },
-  { id: 'new-4', date: '11.23(수)', title: 'SUMIN', venue: '롤링홀' },
+  { id: 'sumin-live', date: '11.25(수)', title: 'SUMIN', venue: '롤링홀', badge: { type: 'pick', label: 'PICK' } },
+  { id: 'hanroro-solo', date: '12.5(토)', title: '한로로', venue: '무신사 개러지' },
+  { id: 'silica-gel-live', date: '12.28(월)', title: '실리카겔', venue: '예스24 라이브홀', badge: { type: 'open-soon', label: '오픈 D-1' } },
+  { id: 'vulfpeck-seoul', date: '1.20(수)', title: 'Vulfpeck', venue: '올림픽홀' },
 ];
 
 export const ticketOpens = ['D-1 공연 내일 20:00', 'D-3 공연 21:00'];
 
 export const festivals: Festival[] = [
-  { id: 'fest-1', title: 'Fujirock Festival 2026', date: '17 JUL — 20 JUL', location: '나에바 스키리조트, 일본' },
-  { id: 'fest-2', title: '2026 부산 국제 락 페스티벌', date: '2 OCT — 4 OCT', location: '삼락생태공원, 부산' },
+  { id: 'fujirock-2027', title: 'Fujirock Festival 2027', date: '23 JUL — 25 JUL', location: '나에바 스키리조트, 일본' },
+  { id: 'busan-rock-2027', title: '2027 부산 국제 락 페스티벌', date: '1 OCT — 2 OCT', location: '삼락생태공원, 부산' },
 ];
-
-export const pastIssueRange = 'Vol.01 — Vol.11';

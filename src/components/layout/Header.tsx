@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import MenuLayer from './MenuLayer';
 
 export default function Header() {
   const [isStuck, setIsStuck] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const closeMenu = useCallback(() => setIsMenuOpen(false), []);
 
   useEffect(() => {
     const onScroll = () => setIsStuck(window.scrollY > 0);
@@ -29,10 +32,11 @@ export default function Header() {
         <button type="button" aria-label="검색">
           <Image src="/images/icon/search.svg" alt="" width={16} height={16} />
         </button>
-        <button type="button" aria-label="메뉴">
+        <button type="button" aria-label="메뉴" aria-expanded={isMenuOpen} onClick={() => setIsMenuOpen(true)}>
           <Image src="/images/icon/menu.svg" alt="" width={16} height={12} />
         </button>
       </div>
+      <MenuLayer isOpen={isMenuOpen} onClose={closeMenu} />
     </header>
   );
 }
