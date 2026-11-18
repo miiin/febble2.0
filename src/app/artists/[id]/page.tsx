@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import FollowButton from '@/components/artist/FollowButton';
+import SpotifyEmbed from '@/components/artist/SpotifyEmbed';
 import ShowRow from '@/components/show/ShowRow';
 import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
@@ -45,18 +46,7 @@ function ArtistDetail({ id }: { id: string }) {
       <section className="mt-10 px-4">
         <SectionTitle title="Listen" sub="미리듣기" />
         <div className="mt-3">
-          {artist.spotifyArtistId ? (
-            <iframe
-              title={`${artist.name} Spotify`}
-              src={`https://open.spotify.com/embed/artist/${artist.spotifyArtistId}?utm_source=generator`}
-              height={152}
-              className="w-full rounded-xl"
-              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              loading="lazy"
-            />
-          ) : (
-            <p className="border border-black px-3 py-6 text-center text-sm">미리듣기를 준비하고 있어요.</p>
-          )}
+          <SpotifyEmbed artistName={artist.name} spotifyArtistId={artist.spotifyArtistId} />
         </div>
       </section>
 

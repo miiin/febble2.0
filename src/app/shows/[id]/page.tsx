@@ -1,13 +1,14 @@
 import { Suspense } from 'react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import AddShowToCalendar from '@/components/calendar/AddShowToCalendar';
+import Lineup from '@/components/show/Lineup';
+import ShowActionBar from '@/components/show/ShowActionBar';
 import Timetable from '@/components/show/Timetable';
-import LikeButton from '@/components/ui/LikeButton';
 import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
-import { formatRange } from '@/lib/date';
+import { formatRange, formatShort } from '@/lib/date';
 import { getArtist } from '@/mocks/artists';
-import { CATEGORY_LABEL, getShow, shows } from '@/mocks/shows';
+import { CATEGORY_LABEL, DEFAULT_TIME_ZONE, getShow, getTicketStatus, MOCK_TODAY, shows } from '@/mocks/shows';
 
 export function generateStaticParams() {
   return shows.map((show) => ({ id: show.id }));
@@ -29,12 +30,11 @@ function ShowDetail({ id }: { id: string }) {
   if (!show) notFound();
 
   const lineup = show.artistIds.map(getArtist).filter((artist) => artist !== undefined);
-  const artistNames = Object.fromEntries(lineup.map((artist) => [artist.id, artist.name]));
 
   const info = [
     { label: '일시', value: formatRange(show.startDate, show.endDate) },
     { label: '장소', value: show.venue },
-    { label: '티켓 오픈', value: show.ticketOpenAt },
+    { label: '티켓 오픈', value: show.ticketOpenAt && `${formatShort(show.ticketOpenAt.slice(0, 10))} ${show.ticketOpenAt.slice(11)}` },
     { label: '가격', value: show.price },
   ].filter((row) => row.value);
 
@@ -54,28 +54,30 @@ function ShowDetail({ id }: { id: string }) {
             </div>
           ))}
         </dl>
+        <div className="mt-2 flex justify-end">
+          <AddShowToCalendar
+            id={show.id}
+            title={show.title}
+            venue={show.venue}
+            startDate={show.startDate}
+            endDate={show.endDate}
+            startTime={show.startTime}
+            timeZone={show.timeZone}
+          />
+        </div>
       </div>
 
       <section className="mt-10 px-4">
         <SectionTitle title="Lineup" />
-        <ul className="mt-3 flex gap-3 overflow-x-auto pb-1">
-          {lineup.map((artist) => (
-            <li key={artist.id} className="w-16 shrink-0">
-              <Link href={`/artists/${artist.id}`} className="flex flex-col items-center gap-1.5">
-                <Thumb src={artist.image} alt={artist.name} className="size-16 rounded-full" />
-                <span className="w-full truncate text-center text-xs">{artist.name}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <Lineup artists={lineup} />
       </section>
 
       {show.category === 'festival' && (
-        <section className="mt-10 px-4">
-          <SectionTitle title="Timetable" sub={show.timetable ? '보고 싶은 무대를 눌러 담아보세요' : undefined} />
+        <section id="timetable" className="mt-10 scroll-mt-16 px-4">
+          <SectionTitle title="Timetable" sub={show.timetable ? '눌러서 미리 듣고, 하트로 담아보세요' : undefined} />
           <div className="mt-3">
             {show.timetable ? (
-              <Timetable stages={show.timetable.stages} slots={show.timetable.slots} artistNames={artistNames} />
+              <Timetable showId={show.id} title={show.title} venue={show.venue} timeZone={show.timeZone ?? DEFAULT_TIME_ZONE} stages={show.timetable.stages} slots={show.timetable.slots} artists={lineup} />
             ) : (
               <p className="border border-black px-3 py-6 text-center text-sm">시간표는 공개되는 대로 알려드릴게요.</p>
             )}
@@ -83,15 +85,13 @@ function ShowDetail({ id }: { id: string }) {
         </section>
       )}
 
-      <div className="sticky bottom-0 mt-10 flex gap-3 border-t border-black bg-white px-4 py-3">
-        <Link
-          href={show.ticketUrl ?? '#'}
-          className="flex h-11 flex-1 items-center justify-center rounded-lg border border-black bg-brand-yellow text-sm"
-        >
-          예매하러 가기
-        </Link>
-        <LikeButton className="flex size-11 items-center justify-center rounded-full border border-black" />
-      </div>
+      <ShowActionBar
+        showId={show.id}
+        status={getTicketStatus(show, MOCK_TODAY)}
+        vendors={show.ticketVendors}
+        ticketOpenAt={show.ticketOpenAt}
+        hasTimetable={!!show.timetable}
+      />
     </main>
   );
 }

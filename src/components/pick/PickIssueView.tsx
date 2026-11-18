@@ -56,7 +56,7 @@ export default function PickIssueView({ issue, label }: Props) {
 
         <div className="mt-5 flex gap-3">
           <Link
-            href={main.ticketUrl ?? '#'}
+            href={main.ticketVendors[0]?.url ?? '#'}
             className="flex h-11 flex-1 items-center justify-center rounded-lg border border-black bg-brand-yellow text-sm"
           >
             예매하러 가기
