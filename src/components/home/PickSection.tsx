@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import LikeButton from '@/components/ui/LikeButton';
 import Thumb from '@/components/ui/Thumb';
 import { pastIssueRange, pickIssue } from '@/mocks/home';
 
@@ -33,9 +34,7 @@ export default function PickSection() {
           <Link href="#" className="flex h-11 flex-1 items-center justify-center rounded-lg border border-black bg-brand-yellow text-sm">
             예매하러 가기
           </Link>
-          <button type="button" aria-label="찜하기" className="flex size-11 items-center justify-center rounded-full border border-black">
-            <Image src="/images/icon/heart.svg" alt="" width={16} height={16} />
-          </button>
+          <LikeButton className="flex size-11 items-center justify-center rounded-full border border-black" />
         </div>
       </div>
 
@@ -55,9 +54,7 @@ export default function PickSection() {
             </div>
             <div className="relative">
               <Thumb src={show.image} alt={show.title} className="size-18" />
-              <button type="button" aria-label="찜하기" className="absolute top-0.5 right-0.5">
-                <Image src="/images/icon/heart.svg" alt="" width={16} height={16} />
-              </button>
+              <LikeButton className="absolute top-0.5 right-0.5" />
             </div>
           </li>
         ))}

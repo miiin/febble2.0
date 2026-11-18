@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, IBM_Plex_Sans, IBM_Plex_Sans_KR, Instrument_Serif, Inter_Tight } from 'next/font/google';
+import LoginSheetProvider from '@/components/auth/LoginSheetProvider';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import './globals.css';
@@ -28,11 +29,13 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html lang="ko" className={`${fontVariables} antialiased`}>
       <body className="bg-neutral-100 font-sans text-black">
         {/* 모바일 전용 레이아웃. PC 대응은 이 컨테이너의 max-w 제한을 푸는 것부터 시작한다. */}
-        <div className="mx-auto min-h-dvh w-full max-w-mobile bg-white">
-          <Header />
-          {children}
-          <Footer />
-        </div>
+        <LoginSheetProvider>
+          <div className="mx-auto min-h-dvh w-full max-w-mobile bg-white">
+            <Header />
+            {children}
+            <Footer />
+          </div>
+        </LoginSheetProvider>
       </body>
     </html>
   );
