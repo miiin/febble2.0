@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import ConfirmButton from '@/components/admin/ConfirmButton';
+import DatePicker from '@/components/admin/DatePicker';
 import SearchSelect from '@/components/admin/SearchSelect';
 import { Field, Section } from '@/components/admin/ui';
 import { Button } from '@/components/shadcn/button';
@@ -71,7 +72,7 @@ export default function PickForm({ issue, nextVol, shows }: Props) {
             <Input id="vol" type="number" min={1} required disabled={!!issue} value={form.vol} onChange={(e) => setForm({ ...form, vol: Number(e.target.value) })} />
           </Field>
           <Field label="발행일" htmlFor="publishedAt">
-            <Input id="publishedAt" type="date" required value={form.publishedAt} onChange={(e) => setForm({ ...form, publishedAt: e.target.value })} />
+            <DatePicker id="publishedAt" value={form.publishedAt} onChange={(publishedAt) => setForm({ ...form, publishedAt })} />
           </Field>
           <Field label="큐레이터" htmlFor="curator">
             <Input id="curator" required value={form.curator} onChange={(e) => setForm({ ...form, curator: e.target.value })} />

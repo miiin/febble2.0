@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import ConfirmButton from '@/components/admin/ConfirmButton';
+import DatePicker, { DateTimePicker } from '@/components/admin/DatePicker';
 import SearchSelect from '@/components/admin/SearchSelect';
 import { Field, Section, selectClass } from '@/components/admin/ui';
 import { Button } from '@/components/shadcn/button';
@@ -131,10 +132,10 @@ export default function ShowForm({ show, artists }: Props) {
         </Field>
         <div className="grid grid-cols-3 gap-4">
           <Field label="시작일" htmlFor="startDate">
-            <Input id="startDate" required type="date" value={form.startDate} onChange={(e) => set('startDate', e.target.value)} />
+            <DatePicker id="startDate" value={form.startDate} onChange={(value) => setForm((prev) => ({ ...prev, startDate: value, endDate: prev.endDate && prev.endDate >= value ? prev.endDate : value }))} />
           </Field>
           <Field label="종료일" htmlFor="endDate">
-            <Input id="endDate" required type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} />
+            <DatePicker id="endDate" value={form.endDate} min={form.startDate || undefined} onChange={(value) => set('endDate', value)} />
           </Field>
           <Field label="시작 시각" htmlFor="startTime" hint="비우면 캘린더에 종일 일정">
             <Input id="startTime" type="time" value={form.startTime} onChange={(e) => set('startTime', e.target.value)} />
@@ -155,7 +156,7 @@ export default function ShowForm({ show, artists }: Props) {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="티켓 오픈" htmlFor="ticketOpenAt" hint="공연 현지 시각">
-            <Input id="ticketOpenAt" type="datetime-local" value={form.ticketOpenAt} onChange={(e) => set('ticketOpenAt', e.target.value)} />
+            <DateTimePicker id="ticketOpenAt" value={form.ticketOpenAt} onChange={(value) => set('ticketOpenAt', value)} placeholder="정해지면 입력" clearable />
           </Field>
           <Field label="가격" htmlFor="price" hint="화면에 그대로 보여요">
             <Input id="price" value={form.price} onChange={(e) => set('price', e.target.value)} placeholder="55,000원" />
@@ -306,7 +307,7 @@ export default function ShowForm({ show, artists }: Props) {
                     return (
                       <TableRow key={slot.id ?? `new-slot-${index}`}>
                         <TableCell>
-                          <Input type="date" min={form.startDate} max={form.endDate} value={slot.date} onChange={(e) => update({ date: e.target.value })} aria-label="날짜" />
+                          <DatePicker value={slot.date} min={form.startDate || undefined} max={form.endDate || undefined} onChange={(date) => update({ date })} className="w-44" />
                         </TableCell>
                         <TableCell>
                           <select value={slot.stageKey} onChange={(e) => update({ stageKey: e.target.value })} className={selectClass} aria-label="스테이지">
