@@ -44,6 +44,8 @@ export type Show = {
   ticketVendors: TicketVendor[];
   soldOut?: boolean;
   ticketOpenAt?: string; // 'YYYY-MM-DD HH:mm'
+  /** DB 등록일 'YYYY-MM-DD'. 홈 For you 의 '새공연' 배지에 쓴다 (mock 에는 없음). */
+  createdAt?: string;
   /** 페스티벌 시간표. 없으면 라인업만 보여준다. */
   timetable?: { stages: Stage[]; slots: TimetableSlot[] };
 };

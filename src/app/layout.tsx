@@ -3,8 +3,6 @@ import { Geist, IBM_Plex_Sans, IBM_Plex_Sans_KR, Instrument_Serif, Inter_Tight }
 import AuthSessionProvider from '@/components/auth/AuthSessionProvider';
 import LoginSheetProvider from '@/components/auth/LoginSheetProvider';
 import UserStateProvider from '@/components/auth/UserStateProvider';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import './globals.css';
 
 const plexKr = IBM_Plex_Sans_KR({ weight: ['400', '500', '700'], variable: '--font-plex-kr', subsets: ['latin'] });
@@ -30,16 +28,12 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="ko" className={`${fontVariables} antialiased`}>
       <body className="bg-neutral-100 font-sans text-black">
-        {/* 모바일 전용 레이아웃. PC 대응은 이 컨테이너의 max-w 제한을 푸는 것부터 시작한다. */}
         <AuthSessionProvider>
           <UserStateProvider>
-          <LoginSheetProvider>
-            <div className="mx-auto min-h-dvh w-full max-w-mobile bg-white">
-              <Header />
+            <LoginSheetProvider>
+              {/* 공개 화면 틀은 (site)/layout, 어드민 틀은 admin/layout 에 있다. */}
               {children}
-              <Footer />
-            </div>
-          </LoginSheetProvider>
+            </LoginSheetProvider>
           </UserStateProvider>
         </AuthSessionProvider>
       </body>

@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+@import 'tw-animate-css'; /* 어드민 shadcn 다이얼로그·팝오버 애니메이션 */
+
+/* dark: 는 .dark 클래스 안에서만 (OS 다크 모드를 따르지 않는다). febble 은 밝은 화면만 쓴다. shadcn 컴포넌트만 dark: 를 쓴다. */
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   /* 폰트는 layout.tsx 에서 next/font 로 불러와 CSS 변수로 연결한다. */
@@ -31,4 +35,60 @@ body {
   /* 한글이 단어 중간에서 끊기지 않게 한다. */
   word-break: keep-all;
   overflow-wrap: break-word;
+}
+
+/* ─── 어드민(shadcn/ui) ──────────────────────────────────────────────
+ * 아래 색상 변수와 bg-primary 같은 유틸리티는 shadcn 컴포넌트만 쓴다. 사이트 화면에는 영향이 없다.
+ * Tailwind 기본 둥글기(rounded-*)는 사이트도 쓰므로 덮어쓰지 않는다.
+ * 테두리 색 기본값은 어드민 영역과 shadcn 컴포넌트(data-slot)에만 건다. 팝오버·다이얼로그는 body 에 붙어서 data-slot 으로 잡는다. */
+:root {
+  --radius: 0.375rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.145 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.87 0 0);
+  --ring: oklch(0.708 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  .admin,
+  .admin *,
+  [data-slot],
+  [data-slot] * {
+    @apply border-border outline-ring/50;
+  }
 }

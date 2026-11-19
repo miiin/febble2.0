@@ -26,7 +26,10 @@ async function IssueDetail({ vol }: { vol: number }) {
   const issue = await getIssue(vol);
   if (!issue) notFound();
 
-  const [prev, next, shows] = await Promise.all([getIssue(vol - 1), getIssue(vol + 1), getShows()]);
+  // 이전·다음 호는 목록에서 찾는다 (getIssue 는 없으면 DB 를 다시 읽는다).
+  const [issues, shows] = await Promise.all([getPickIssues(), getShows()]);
+  const prev = issues.find((item) => item.vol === vol - 1);
+  const next = issues.find((item) => item.vol === vol + 1);
 
   return (
     <main className="pt-8 pb-14">

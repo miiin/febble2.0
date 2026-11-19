@@ -4,6 +4,7 @@
 import 'server-only';
 import { asc, count, desc, eq, sql } from 'drizzle-orm';
 import { cacheLife, cacheTag } from 'next/cache';
+import { connection } from 'next/server';
 import { db } from '@/db';
 import * as t from '@/db/schema';
 import type { Artist } from '@/mocks/artists';
@@ -16,7 +17,11 @@ export async function getCatalog() {
   'use cache';
   cacheLife('hours');
   cacheTag('catalog');
+  return loadCatalog();
+}
 
+/** 캐시 없이 DB 에서 바로 읽는다. */
+async function loadCatalog() {
   const [artistRows, showRows, lineupRows, vendorRows, stageRows, slotRows, issueRows, itemRows] = await Promise.all([
     db
       .select({
@@ -46,6 +51,7 @@ export async function getCatalog() {
         description: t.shows.description,
         price: t.shows.price,
         soldOut: t.shows.soldOut,
+        createdAt: t.shows.createdAt,
         // 화면은 공연 현지 시각 'YYYY-MM-DD HH:mm' 을 쓴다.
         ticketOpenAt: sql<string | null>`to_char(${t.shows.ticketOpenAt} AT TIME ZONE ${t.shows.timeZone}, 'YYYY-MM-DD HH24:MI')`,
       })
@@ -87,6 +93,7 @@ export async function getCatalog() {
       ticketVendors: vendorRows.filter((vendor) => vendor.showId === row.id).map(({ name, url }) => ({ name, url })),
       soldOut: row.soldOut,
       ticketOpenAt: row.ticketOpenAt ?? undefined,
+      createdAt: row.createdAt.toISOString().slice(0, 10),
       timetable:
         stages.length > 0
           ? {
@@ -128,8 +135,17 @@ export async function getShows() {
   return (await getCatalog()).shows;
 }
 
+// 하나를 찾을 때 캐시된 카탈로그에 없으면 404 전에 DB 를 한 번 더 본다.
+// 처음 보는 주소는 빌드 때 만든 틀과 그때의 카탈로그로 먼저 그려져서, 어드민에서 방금 만든 항목이 첫 방문에 404 가 될 수 있다.
+async function findFresh<T>(pick: (catalog: Awaited<ReturnType<typeof loadCatalog>>) => T | undefined) {
+  const cached = pick(await getCatalog());
+  if (cached !== undefined) return cached;
+  await connection(); // 직접 읽기는 요청 시점에만 (미리 만들 때는 여기서 멈춘다)
+  return pick(await loadCatalog());
+}
+
 export async function getShow(id: string) {
-  return (await getCatalog()).shows.find((show) => show.id === id);
+  return findFresh((catalog) => catalog.shows.find((show) => show.id === id));
 }
 
 export async function getShowsByArtist(artistId: string) {
@@ -141,7 +157,7 @@ export async function getArtists() {
 }
 
 export async function getArtist(id: string) {
-  return (await getCatalog()).artists.find((artist) => artist.id === id);
+  return findFresh((catalog) => catalog.artists.find((artist) => artist.id === id));
 }
 
 /** 최신 호가 앞에 온다. */
@@ -150,5 +166,5 @@ export async function getPickIssues() {
 }
 
 export async function getIssue(vol: number) {
-  return (await getCatalog()).pickIssues.find((issue) => issue.vol === vol);
+  return findFresh((catalog) => catalog.pickIssues.find((issue) => issue.vol === vol));
 }

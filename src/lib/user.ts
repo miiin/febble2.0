@@ -17,6 +17,7 @@ export type CurrentUser = {
   image?: string;
   provider: LoginProvider;
   joinedAt: string; // 'YYYY-MM-DD'
+  isAdmin: boolean;
 };
 
 /** 로그인 안 했으면 null */
@@ -34,6 +35,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       email: users.email,
       image: users.image,
       createdAt: users.createdAt,
+      role: users.role,
       provider: accounts.provider,
     })
     .from(users)
@@ -49,6 +51,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     image: row.image ?? undefined,
     provider: (row.provider ?? 'google') as LoginProvider,
     joinedAt: row.createdAt.toISOString().slice(0, 10),
+    isAdmin: row.role === 'admin',
   };
 }
 

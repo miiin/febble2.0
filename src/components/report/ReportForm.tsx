@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import { submitReport } from '@/lib/reportActions';
 
 const FIELDS = [
   { name: 'title', label: '공연 · 페스티벌 이름', placeholder: '2027 부산 국제 락 페스티벌', required: true },
@@ -16,6 +17,8 @@ const INPUT = 'w-full rounded-lg border border-black px-3 py-2.5 text-sm trackin
 // 공연 제보. 공연 이름만 필수, 나머지는 아는 만큼.
 export default function ReportForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState<string>();
+  const [isPending, startTransition] = useTransition();
 
   if (isSubmitted) {
     return (
@@ -36,8 +39,12 @@ export default function ReportForm() {
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        // TODO: 제보 저장 연동 (1.0 은 Google Sheet 에 기록)
-        setIsSubmitted(true);
+        const formData = new FormData(event.currentTarget);
+        startTransition(async () => {
+          const result = await submitReport(formData).catch(() => ({ error: '저장하지 못했어요. 잠시 뒤 다시 시도해주세요.' }));
+          setError(result.error);
+          if (!result.error) setIsSubmitted(true);
+        });
       }}
       className="mt-6 flex flex-col gap-4"
     >
@@ -61,8 +68,9 @@ export default function ReportForm() {
         <textarea name="message" rows={4} placeholder="타임테이블이 공개됐어요, 정보가 틀렸어요 등" className={`${INPUT} resize-none`} />
       </label>
 
-      <button type="submit" className="mt-2 flex h-12 items-center justify-center rounded-lg border border-black bg-brand-yellow text-sm">
-        제보하기
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <button type="submit" disabled={isPending} className="mt-2 flex h-12 items-center justify-center rounded-lg border border-black bg-brand-yellow text-sm">
+        {isPending ? '보내는 중…' : '제보하기'}
       </button>
     </form>
   );

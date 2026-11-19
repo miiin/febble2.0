@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { signOut } from 'next-auth/react';
-import { deleteAccount } from '@/app/me/account/actions';
+import { deleteAccount } from '@/app/(site)/me/account/actions';
 import BottomSheet from '@/components/ui/BottomSheet';
 
 // 로그아웃 · 회원 탈퇴. 탈퇴는 되돌릴 수 없으니 확인 시트를 한 번 더 띄운다.
