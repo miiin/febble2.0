@@ -197,14 +197,6 @@ export const shows: Show[] = [
 
 export const DEFAULT_TIME_ZONE = 'Asia/Seoul';
 
-export function getShow(id: string) {
-  return shows.find((show) => show.id === id);
-}
-
-export function getShowsByArtist(artistId: string) {
-  return shows.filter((show) => show.artistIds.includes(artistId));
-}
-
 export function sortByDate(list: Show[]) {
   return [...list].sort((a, b) => a.startDate.localeCompare(b.startDate));
 }

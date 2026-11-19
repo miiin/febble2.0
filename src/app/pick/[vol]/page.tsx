@@ -4,10 +4,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import PickIssueView from '@/components/pick/PickIssueView';
 import { formatShort } from '@/lib/date';
-import { formatVol, getIssue, pickIssues } from '@/mocks/picks';
+import { getIssue, getPickIssues, getShows } from '@/lib/catalog';
+import { formatVol } from '@/mocks/picks';
 
-export function generateStaticParams() {
-  return pickIssues.map((issue) => ({ vol: String(issue.vol) }));
+export async function generateStaticParams() {
+  return (await getPickIssues()).map((issue) => ({ vol: String(issue.vol) }));
 }
 
 export default function PickIssuePage({ params }: PageProps<'/pick/[vol]'>) {
@@ -21,16 +22,15 @@ export default function PickIssuePage({ params }: PageProps<'/pick/[vol]'>) {
   );
 }
 
-function IssueDetail({ vol }: { vol: number }) {
-  const issue = getIssue(vol);
+async function IssueDetail({ vol }: { vol: number }) {
+  const issue = await getIssue(vol);
   if (!issue) notFound();
 
-  const prev = getIssue(vol - 1);
-  const next = getIssue(vol + 1);
+  const [prev, next, shows] = await Promise.all([getIssue(vol - 1), getIssue(vol + 1), getShows()]);
 
   return (
     <main className="pt-8 pb-14">
-      <PickIssueView issue={issue} label={`${formatShort(issue.publishedAt)} 발행 · 고른 공연`} />
+      <PickIssueView issue={issue} label={`${formatShort(issue.publishedAt)} 발행 · 고른 공연`} shows={shows} />
 
       <nav className="flex items-center justify-between px-4 py-4 text-xs">
         {prev ? (

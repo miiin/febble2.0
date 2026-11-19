@@ -1,4 +1,4 @@
-// 홈 화면 mock 데이터. DB 연결 전까지 사용한다.
+// 홈 For you(로그인) mock 데이터. 팔로우 기능을 DB 에 붙이면 지운다. 나머지 섹션은 lib/catalog 에서 만든다.
 // image 가 없으면 회색 플레이스홀더로 그린다. 피그마에서 받은 이미지는 public/images 에 두고 경로를 넣는다.
 // 각 항목의 id 는 mocks/shows.ts 의 공연 id 와 같다 (/shows/[id] 로 연결).
 
@@ -23,23 +23,6 @@ export type FollowedArtistNews = {
   badge?: { type: Badge; label: string };
 };
 
-export type NewShow = {
-  id: string;
-  date: string;
-  title: string;
-  venue: string;
-  image?: string;
-  badge?: { type: Badge; label: string };
-};
-
-export type Festival = {
-  id: string;
-  title: string;
-  date: string;
-  location: string;
-  image?: string;
-};
-
 export const followedArtistNews: FollowedArtistNews[] = [
   { id: 'bongje-solo', name: '봉제인간', date: '23 DEC', venue: '롤링홀', badge: { type: 'new', label: '새공연' } },
   { id: 'silica-gel-live', name: '실리카겔', date: '28 DEC — 29 DEC', venue: '예스24 라이브홀', badge: { type: 'open-soon', label: '오픈 D-1' } },
@@ -53,17 +36,3 @@ export const recommendation: { basedOn: string; shows: Show[] } = {
     { id: 'vulfpeck-seoul', title: 'Vulfpeck', date: '20 JAN', venue: '올림픽홀' },
   ],
 };
-
-export const newShows: NewShow[] = [
-  { id: 'sumin-live', date: '11.25(수)', title: 'SUMIN', venue: '롤링홀', badge: { type: 'pick', label: 'PICK' } },
-  { id: 'hanroro-solo', date: '12.5(토)', title: '한로로', venue: '무신사 개러지' },
-  { id: 'silica-gel-live', date: '12.28(월)', title: '실리카겔', venue: '예스24 라이브홀', badge: { type: 'open-soon', label: '오픈 D-1' } },
-  { id: 'vulfpeck-seoul', date: '1.20(수)', title: 'Vulfpeck', venue: '올림픽홀' },
-];
-
-export const ticketOpens = ['D-1 공연 내일 20:00', 'D-3 공연 21:00'];
-
-export const festivals: Festival[] = [
-  { id: 'fujirock-2027', title: 'Fujirock Festival 2027', date: '23 JUL — 25 JUL', location: '나에바 스키리조트, 일본' },
-  { id: 'busan-rock-2027', title: '2027 부산 국제 락 페스티벌', date: '1 OCT — 2 OCT', location: '삼락생태공원, 부산' },
-];

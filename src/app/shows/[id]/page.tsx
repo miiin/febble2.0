@@ -6,13 +6,13 @@ import ShowActionBar from '@/components/show/ShowActionBar';
 import Timetable from '@/components/show/Timetable';
 import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
+import { getArtist, getShow, getShows } from '@/lib/catalog';
 import { formatRange, formatShort } from '@/lib/date';
-import { getArtist } from '@/mocks/artists';
 import { isLoggedIn, pickedSlotIds } from '@/mocks/session';
-import { CATEGORY_LABEL, DEFAULT_TIME_ZONE, getShow, getTicketStatus, MOCK_TODAY, shows } from '@/mocks/shows';
+import { CATEGORY_LABEL, DEFAULT_TIME_ZONE, getTicketStatus, MOCK_TODAY } from '@/mocks/shows';
 
-export function generateStaticParams() {
-  return shows.map((show) => ({ id: show.id }));
+export async function generateStaticParams() {
+  return (await getShows()).map((show) => ({ id: show.id }));
 }
 
 export default function ShowPage({ params }: PageProps<'/shows/[id]'>) {
@@ -26,11 +26,11 @@ export default function ShowPage({ params }: PageProps<'/shows/[id]'>) {
   );
 }
 
-function ShowDetail({ id }: { id: string }) {
-  const show = getShow(id);
+async function ShowDetail({ id }: { id: string }) {
+  const show = await getShow(id);
   if (!show) notFound();
 
-  const lineup = show.artistIds.map(getArtist).filter((artist) => artist !== undefined);
+  const lineup = (await Promise.all(show.artistIds.map(getArtist))).filter((artist) => artist !== undefined);
 
   const info = [
     { label: '일시', value: formatRange(show.startDate, show.endDate) },

@@ -3,16 +3,18 @@ import LikeButton from '@/components/ui/LikeButton';
 import Thumb from '@/components/ui/Thumb';
 import { formatRange } from '@/lib/date';
 import type { PickIssue, PickItem } from '@/mocks/picks';
-import { getShow, MOCK_TODAY } from '@/mocks/shows';
+import { MOCK_TODAY, type Show } from '@/mocks/shows';
 
 type Props = {
   issue: PickIssue;
   /** 제목 아래 설명 앞부분. 홈은 '이번 호에 고른 공연', Vol 상세는 '12호에 고른 공연' */
   label: string;
+  /** 호에 실린 공연을 찾을 카탈로그 */
+  shows: Show[];
 };
 
-function resolve(item: PickItem) {
-  const show = getShow(item.showId);
+function resolve(item: PickItem, shows: Show[]) {
+  const show = shows.find((candidate) => candidate.id === item.showId);
   if (!show) return undefined;
   return {
     ...show,
@@ -23,9 +25,9 @@ function resolve(item: PickItem) {
 }
 
 // Febble Pick 한 호. 홈 Pick 섹션과 Vol 상세가 같이 쓴다.
-export default function PickIssueView({ issue, label }: Props) {
-  const main = resolve(issue.main);
-  const others = issue.others.map(resolve).filter((show) => show !== undefined);
+export default function PickIssueView({ issue, label, shows }: Props) {
+  const main = resolve(issue.main, shows);
+  const others = issue.others.map((item) => resolve(item, shows)).filter((show) => show !== undefined);
   if (!main) return null;
 
   return (

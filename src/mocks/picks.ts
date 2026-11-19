@@ -53,14 +53,6 @@ const PAST: PickIssue[] = Array.from({ length: 11 }, (_, i) => {
 /** 최신 호가 앞에 오도록 정렬 */
 export const pickIssues: PickIssue[] = [LATEST, ...PAST.reverse()];
 
-export function getLatestIssue() {
-  return pickIssues[0];
-}
-
-export function getIssue(vol: number) {
-  return pickIssues.find((issue) => issue.vol === vol);
-}
-
 /** 'Vol.01' */
 export function formatVol(vol: number) {
   return `Vol.${String(vol).padStart(2, '0')}`;

@@ -1,6 +1,6 @@
 import { daysBetween, formatShort } from '@/lib/date';
-import { type Artist, artists } from '@/mocks/artists';
-import { shows } from '@/mocks/shows';
+import type { Artist } from '@/mocks/artists';
+import type { Show } from '@/mocks/shows';
 
 export type FeaturedArtist = Artist & { reason: string };
 
@@ -8,7 +8,7 @@ const WINDOW_DAYS = 30;
 
 // 비로그인 For you 배너용: today 부터 30일 안에 공연이나 티켓 오픈이 있는 아티스트를
 // 팔로워 많은 순으로 고른다. 이유 문구는 가장 가까운 일정 기준 ('12.5 공연', '티켓 오픈 D-1').
-export function getFeaturedArtists(today: string, limit = 6): FeaturedArtist[] {
+export function getFeaturedArtists({ shows, artists }: { shows: Show[]; artists: Artist[] }, today: string, limit = 6): FeaturedArtist[] {
   const nearest = new Map<string, { days: number; reason: string }>();
 
   const consider = (artistId: string, date: string, reason: (days: number) => string) => {

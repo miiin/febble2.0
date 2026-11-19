@@ -5,11 +5,11 @@ import SpotifyEmbed from '@/components/artist/SpotifyEmbed';
 import ShowRow from '@/components/show/ShowRow';
 import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
-import { artists, getArtist } from '@/mocks/artists';
-import { getShowsByArtist, sortByDate } from '@/mocks/shows';
+import { getArtist, getArtists, getShowsByArtist } from '@/lib/catalog';
+import { sortByDate } from '@/mocks/shows';
 
-export function generateStaticParams() {
-  return artists.map((artist) => ({ id: artist.id }));
+export async function generateStaticParams() {
+  return (await getArtists()).map((artist) => ({ id: artist.id }));
 }
 
 export default function ArtistPage({ params }: PageProps<'/artists/[id]'>) {
@@ -23,11 +23,11 @@ export default function ArtistPage({ params }: PageProps<'/artists/[id]'>) {
   );
 }
 
-function ArtistDetail({ id }: { id: string }) {
-  const artist = getArtist(id);
+async function ArtistDetail({ id }: { id: string }) {
+  const artist = await getArtist(id);
   if (!artist) notFound();
 
-  const upcoming = sortByDate(getShowsByArtist(artist.id));
+  const upcoming = sortByDate(await getShowsByArtist(artist.id));
 
   return (
     <main className="pb-14">

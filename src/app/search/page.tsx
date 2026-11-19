@@ -38,14 +38,14 @@ function SearchForm({ query = '' }: { query?: string }) {
   );
 }
 
-function Results({ query }: { query: string }) {
+async function Results({ query }: { query: string }) {
   if (!query) {
     return (
       <>
         <SearchForm />
         <p className="mt-8 text-xs">이런 아티스트는 어때요</p>
         <ul className="mt-3 flex flex-wrap gap-2">
-          {suggestedQueries().map((name) => (
+          {(await suggestedQueries()).map((name) => (
             <li key={name}>
               <Link href={`/search?q=${encodeURIComponent(name)}`} className="flex h-8 items-center rounded-full border border-black px-3 text-xs">
                 {name}
@@ -57,7 +57,7 @@ function Results({ query }: { query: string }) {
     );
   }
 
-  const result = search(query);
+  const result = await search(query);
   const isEmpty = result.artists.length === 0 && result.shows.length === 0;
 
   return (

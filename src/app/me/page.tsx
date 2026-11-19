@@ -4,7 +4,8 @@ import LoginRequired from '@/components/auth/LoginRequired';
 import ShowRow from '@/components/show/ShowRow';
 import SectionTitle from '@/components/ui/SectionTitle';
 import { currentUser, followedArtistIds, isLoggedIn, likedShowIds, pickedSlotIds, PROVIDER_LABEL } from '@/mocks/session';
-import { getShow, sortByDate } from '@/mocks/shows';
+import { getShow } from '@/lib/catalog';
+import { sortByDate } from '@/mocks/shows';
 
 const MENU = [
   { href: '/me/account', label: '계정 설정' },
@@ -23,10 +24,11 @@ export default function MyPage() {
   );
 }
 
-function My() {
-  const liked = sortByDate(likedShowIds.map(getShow).filter((show) => show !== undefined));
-  const timetables = Object.entries(pickedSlotIds)
-    .map(([showId, slotIds]) => ({ show: getShow(showId), count: slotIds.length }))
+async function My() {
+  const liked = sortByDate((await Promise.all(likedShowIds.map(getShow))).filter((show) => show !== undefined));
+  const timetables = (
+    await Promise.all(Object.entries(pickedSlotIds).map(async ([showId, slotIds]) => ({ show: await getShow(showId), count: slotIds.length })))
+  )
     .filter((item) => item.show && item.count > 0);
 
   return (

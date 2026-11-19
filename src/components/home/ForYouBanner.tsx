@@ -4,15 +4,13 @@ import Link from 'next/link';
 import { useOpenLoginSheet } from '@/components/auth/LoginSheetProvider';
 import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
-import { getFeaturedArtists } from '@/lib/featuredArtists';
-import { MOCK_TODAY } from '@/mocks/shows';
+import type { FeaturedArtist } from '@/lib/featuredArtists';
 
 // 비로그인 사용자에게 For you 대신 보여주는 가입 유도 배너.
 // 진(zine) 카탈로그 느낌: 그라데이션 배경, 번호 붙은 그리드.
 // 아티스트는 30일 안에 공연·티켓 오픈이 있는 사람 중 팔로워 많은 순 6명.
-export default function ForYouBanner() {
+export default function ForYouBanner({ featured }: { featured: FeaturedArtist[] }) {
   const openLoginSheet = useOpenLoginSheet();
-  const featured = getFeaturedArtists(MOCK_TODAY);
 
   return (
     <section className="mx-4 mt-10 border border-black bg-linear-to-b from-[#6c66ff] to-white to-55% px-3 pt-5 pb-4">

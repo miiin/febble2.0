@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
-import { artists } from '@/mocks/artists';
+import { getArtists } from '@/lib/catalog';
 
-export default function ArtistsPage() {
-  const sorted = [...artists].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+export default async function ArtistsPage() {
+  const sorted = [...(await getArtists())].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
   return (
     <main className="px-4 pt-8 pb-14">

@@ -2,9 +2,19 @@ import Image from 'next/image';
 import Link from 'next/link';
 import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
-import { festivals } from '@/mocks/home';
+import { formatRange } from '@/lib/date';
+import { MOCK_TODAY, type Show, sortByDate } from '@/mocks/shows';
 
-export default function FestSection() {
+// 다가오는 페스티벌, 날짜 순.
+export default function FestSection({ shows }: { shows: Show[] }) {
+  const festivals = sortByDate(shows.filter((show) => show.category === 'festival' && show.endDate >= MOCK_TODAY)).map((show) => ({
+    id: show.id,
+    title: show.title,
+    image: show.image,
+    date: formatRange(show.startDate, show.endDate),
+    location: show.venue,
+  }));
+
   return (
     <section className="mt-10 px-4 pb-14">
       <SectionTitle title="Fest" sub="다가오는 페스티벌" />

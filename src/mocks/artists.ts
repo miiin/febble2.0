@@ -29,7 +29,3 @@ export const artists: Artist[] = [
   { id: 'silica-gel', name: '실리카겔', genres: ['사이키델릭 록'], bio: '사운드와 영상을 함께 다루는 밴드.', followerCount: 12000 },
   { id: 'hanroro', name: '한로로', genres: ['인디 록', '포크'], bio: '청춘의 장면을 노래하는 싱어송라이터.', followerCount: 9800 },
 ];
-
-export function getArtist(id: string) {
-  return artists.find((artist) => artist.id === id);
-}

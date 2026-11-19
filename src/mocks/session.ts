@@ -18,7 +18,8 @@ export const followedArtistIds = ['bongje', 'silica-gel', 'hanroro', 'joo-hyerin
 // 찜한 공연 (mocks/shows.ts 의 id).
 export const likedShowIds = ['wednesday-seoul', 'busan-rock-2027', 'hanroro-solo'];
 
-// 페스티벌별로 내 타임테이블에 담은 무대 (timetable.slots 의 id).
+// 페스티벌별로 내 타임테이블에 담은 무대 (timetable_slots 의 id).
+// npm run db:seed 가 mock 의 s1–s8 을 1–8 로 넣는다. s3·s5·s8 = 한로로·실리카겔·봉제인간.
 export const pickedSlotIds: Record<string, string[]> = {
-  'busan-rock-2027': ['s3', 's5', 's8'],
+  'busan-rock-2027': ['3', '5', '8'],
 };

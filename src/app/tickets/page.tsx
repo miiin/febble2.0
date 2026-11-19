@@ -2,11 +2,12 @@ import Link from 'next/link';
 import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
 import { daysBetween, formatShort } from '@/lib/date';
-import { MOCK_TODAY, shows } from '@/mocks/shows';
+import { getShows } from '@/lib/catalog';
+import { MOCK_TODAY } from '@/mocks/shows';
 
 // 앞으로 열리는 예매 일정. 날짜별로 묶고 같은 날은 시간 순.
-export default function TicketsPage() {
-  const upcoming = shows
+export default async function TicketsPage() {
+  const upcoming = (await getShows())
     .filter((show) => show.ticketOpenAt && show.ticketOpenAt.slice(0, 10) >= MOCK_TODAY)
     .sort((a, b) => a.ticketOpenAt!.localeCompare(b.ticketOpenAt!));
 

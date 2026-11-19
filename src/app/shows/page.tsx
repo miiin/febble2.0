@@ -3,7 +3,8 @@ import Link from 'next/link';
 import ShowRow from '@/components/show/ShowRow';
 import SectionTitle from '@/components/ui/SectionTitle';
 import { formatMonth } from '@/lib/date';
-import { CATEGORY_LABEL, type ShowCategory, shows, sortByDate } from '@/mocks/shows';
+import { getShows } from '@/lib/catalog';
+import { CATEGORY_LABEL, type ShowCategory, sortByDate } from '@/mocks/shows';
 
 const FILTERS: { value?: ShowCategory; label: string }[] = [
   { label: '전체' },
@@ -26,7 +27,8 @@ export default function ShowsPage({ searchParams }: PageProps<'/shows'>) {
   );
 }
 
-function ShowList({ category }: { category?: string }) {
+async function ShowList({ category }: { category?: string }) {
+  const shows = await getShows();
   const filtered = sortByDate(category ? shows.filter((show) => show.category === category) : shows);
 
   // 월별로 묶는다. 정렬돼 있으니 순서대로 넣으면 된다.

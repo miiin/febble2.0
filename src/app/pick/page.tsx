@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import Thumb from '@/components/ui/Thumb';
 import { formatShort } from '@/lib/date';
-import { formatVol, pickIssues } from '@/mocks/picks';
-import { getShow } from '@/mocks/shows';
+import { getCatalog } from '@/lib/catalog';
+import { formatVol } from '@/mocks/picks';
 
-export default function PickListPage() {
+export default async function PickListPage() {
+  const { pickIssues, shows } = await getCatalog();
+
   return (
     <main className="pt-8 pb-14">
       <div className="px-4">
@@ -17,7 +19,7 @@ export default function PickListPage() {
 
       <ol className="mt-6 border-t-2 border-black">
         {pickIssues.map((issue, index) => {
-          const main = getShow(issue.main.showId);
+          const main = shows.find((show) => show.id === issue.main.showId);
           return (
             <li key={issue.vol} className="border-b border-black">
               <Link href={`/pick/${issue.vol}`} className="flex items-center gap-3 px-4 py-4">
