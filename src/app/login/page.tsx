@@ -1,7 +1,8 @@
+import { Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import LoginButtons from '@/components/auth/LoginButtons';
-import { isLoggedIn } from '@/mocks/session';
+import { getCurrentUser } from '@/lib/user';
 
 // 로그인 페이지. 대부분은 로그인 시트로 처리하고, 이 페이지는 직접 들어오거나
 // 로그인이 필요한 주소에서 넘어올 때 쓴다.
@@ -20,16 +21,22 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {isLoggedIn ? (
-        <div className="text-center">
-          <p className="text-sm">이미 로그인돼 있어요.</p>
-          <Link href="/me" className="mt-4 flex h-12 items-center justify-center rounded-lg border border-black bg-brand-yellow text-sm">
-            마이페이지로 가기
-          </Link>
-        </div>
-      ) : (
-        <LoginButtons />
-      )}
+      <Suspense>
+        <LoginActions />
+      </Suspense>
     </main>
+  );
+}
+
+async function LoginActions() {
+  return (await getCurrentUser()) ? (
+    <div className="text-center">
+      <p className="text-sm">이미 로그인돼 있어요.</p>
+      <Link href="/me" className="mt-4 flex h-12 items-center justify-center rounded-lg border border-black bg-brand-yellow text-sm">
+        마이페이지로 가기
+      </Link>
+    </div>
+  ) : (
+    <LoginButtons />
   );
 }

@@ -14,7 +14,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, { schema });
 
 async function main() {
-  // RESTART IDENTITY: 스테이지·슬롯 id 가 1 부터 다시 붙는다 (mocks/session.ts 의 pickedSlotIds 가 이 순서를 가정).
+  // RESTART IDENTITY: 스테이지·슬롯 id 가 1 부터 다시 붙는다.
   await db.execute(sql`TRUNCATE artists, shows, pick_issues RESTART IDENTITY CASCADE`);
 
   await db.insert(schema.artists).values(

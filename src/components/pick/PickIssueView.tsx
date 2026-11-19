@@ -63,7 +63,7 @@ export default function PickIssueView({ issue, label, shows }: Props) {
           >
             예매하러 가기
           </Link>
-          <LikeButton className="flex size-11 items-center justify-center rounded-full border border-black" />
+          <LikeButton showId={main.id} className="flex size-11 items-center justify-center rounded-full border border-black" />
         </div>
       </div>
 
@@ -83,7 +83,7 @@ export default function PickIssueView({ issue, label, shows }: Props) {
             </Link>
             <div className="relative">
               <Thumb src={show.image} alt={show.title} className="size-18" />
-              <LikeButton className="absolute top-0.5 right-0.5" />
+              <LikeButton showId={show.id} className="absolute top-0.5 right-0.5" />
             </div>
           </li>
         ))}

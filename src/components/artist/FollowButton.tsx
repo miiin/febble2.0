@@ -1,19 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useIsLoggedIn } from '@/components/auth/AuthSessionProvider';
 import { useOpenLoginSheet } from '@/components/auth/LoginSheetProvider';
-import { isLoggedIn } from '@/mocks/session';
+import { useUserState } from '@/components/auth/UserStateProvider';
 
-export default function FollowButton({ initialFollowing = false }: { initialFollowing?: boolean }) {
-  const [following, setFollowing] = useState(initialFollowing);
+type Props = {
+  artistId: string;
+  /** 목록을 받아오기 전까지 보여줄 값 (팔로우 목록 화면은 true) */
+  initialFollowing?: boolean;
+};
+
+export default function FollowButton({ artistId, initialFollowing = false }: Props) {
+  const userState = useUserState();
+  const following = userState.isLoaded ? userState.has('follow', artistId) : initialFollowing;
   const openLoginSheet = useOpenLoginSheet();
+  const isLoggedIn = useIsLoggedIn();
 
   const onClick = () => {
     if (!isLoggedIn) {
       openLoginSheet('아티스트를 팔로우하고\n공연 소식을 받아보세요');
       return;
     }
-    setFollowing((prev) => !prev);
+    userState.toggle('follow', artistId);
   };
 
   return (

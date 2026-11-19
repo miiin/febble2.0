@@ -2,14 +2,15 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { useIsLoggedIn } from '@/components/auth/AuthSessionProvider';
 import ArtistPreviewSheet from '@/components/artist/ArtistPreviewSheet';
 import { useOpenLoginSheet } from '@/components/auth/LoginSheetProvider';
 import CalendarSheet from '@/components/calendar/CalendarSheet';
 import type { CalendarEvent } from '@/lib/calendar';
 import { formatShort, toMinutes } from '@/lib/date';
+import { setSlotPicked } from '@/lib/userActions';
 import { drawWallpaper, getWallpaperSize, saveCanvas } from '@/lib/wallpaper';
 import type { Artist } from '@/mocks/artists';
-import { isLoggedIn } from '@/mocks/session';
 import type { Stage, TimetableSlot } from '@/mocks/shows';
 
 type Props = {
@@ -37,6 +38,7 @@ export default function Timetable({ showId, title, venue, timeZone, stages, slot
   const [date, setDate] = useState(dates[0]);
   const [picked, setPicked] = useState<Set<string>>(() => new Set(initialPicked));
   const openLoginSheet = useOpenLoginSheet();
+  const isLoggedIn = useIsLoggedIn();
 
   const daySlots = slots.filter((slot) => slot.date === date);
   const startHour = Math.floor(Math.min(...daySlots.map((slot) => toMinutes(slot.start))) / 60);
@@ -49,12 +51,17 @@ export default function Timetable({ showId, title, venue, timeZone, stages, slot
       openLoginSheet('보고 싶은 무대를 담아\n나만의 타임테이블을 만들어보세요');
       return;
     }
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (next.has(slotId)) next.delete(slotId);
-      else next.add(slotId);
-      return next;
-    });
+    // 화면부터 바꾸고 저장한다. 실패하면 되돌린다.
+    const on = !picked.has(slotId);
+    const apply = (value: boolean) =>
+      setPicked((prev) => {
+        const next = new Set(prev);
+        if (value) next.add(slotId);
+        else next.delete(slotId);
+        return next;
+      });
+    apply(on);
+    setSlotPicked(slotId, on).catch(() => apply(!on));
   };
 
   const previewSlot = slots.find((slot) => slot.id === previewSlotId);

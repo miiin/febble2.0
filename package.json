@@ -15,11 +15,13 @@
     "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@auth/drizzle-adapter": "^1.11.3",
     "@neon/config": "^1.14.4",
     "@neon/env": "^2.1.7",
     "@vercel/functions": "^3.11.3",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.6",
+    "next-auth": "^5.0.0-beta.32",
     "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",

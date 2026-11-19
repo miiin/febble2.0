@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useIsLoggedIn } from '@/components/auth/AuthSessionProvider';
 import { useOpenLoginSheet } from '@/components/auth/LoginSheetProvider';
 import BottomSheet from '@/components/ui/BottomSheet';
 import LikeButton from '@/components/ui/LikeButton';
 import { formatShort } from '@/lib/date';
 import { trackTicketOutbound } from '@/lib/track';
-import { isLoggedIn } from '@/mocks/session';
 import type { TicketStatus, TicketVendor } from '@/mocks/shows';
 
 type Props = {
@@ -30,6 +30,7 @@ export default function ShowActionBar({ showId, status, vendors, ticketOpenAt, h
   const [isNotifying, setIsNotifying] = useState(false);
   const [isVendorSheetOpen, setIsVendorSheetOpen] = useState(false);
   const openLoginSheet = useOpenLoginSheet();
+  const isLoggedIn = useIsLoggedIn();
 
   const toggleNotify = () => {
     if (!isLoggedIn) {
@@ -110,7 +111,7 @@ export default function ShowActionBar({ showId, status, vendors, ticketOpenAt, h
     <>
       <div className="sticky bottom-0 mt-10 flex items-center gap-2 border-t border-black bg-white px-4 py-3">
         {renderMain()}
-        <LikeButton className="flex size-11 shrink-0 items-center justify-center rounded-full border border-black" />
+        <LikeButton showId={showId} className="flex size-11 shrink-0 items-center justify-center rounded-full border border-black" />
       </div>
 
       {vendors.length > 1 && (

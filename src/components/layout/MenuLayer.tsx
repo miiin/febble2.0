@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { useIsLoggedIn } from '@/components/auth/AuthSessionProvider';
 import { useOpenLoginSheet } from '@/components/auth/LoginSheetProvider';
-import { isLoggedIn } from '@/mocks/session';
 
 const LINKS = [
   { href: '/shows', label: 'Shows', sub: '전체 공연' },
@@ -21,6 +21,7 @@ type Props = {
 // 헤더 메뉴 버튼으로 여는 전체 화면 메뉴.
 export default function MenuLayer({ isOpen, onClose }: Props) {
   const openLoginSheet = useOpenLoginSheet();
+  const isLoggedIn = useIsLoggedIn();
 
   useEffect(() => {
     if (!isOpen) return;

@@ -1,10 +1,11 @@
+import { Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import LoginRequired from '@/components/auth/LoginRequired';
 import ShowRow from '@/components/show/ShowRow';
 import SectionTitle from '@/components/ui/SectionTitle';
-import { currentUser, followedArtistIds, isLoggedIn, likedShowIds, pickedSlotIds, PROVIDER_LABEL } from '@/mocks/session';
 import { getShow } from '@/lib/catalog';
+import { getCurrentUser, getFollowedArtistIds, getLikedShowIds, getPickedSlotIds, PROVIDER_LABEL } from '@/lib/user';
 import { sortByDate } from '@/mocks/shows';
 
 const MENU = [
@@ -19,12 +20,22 @@ export default function MyPage() {
   return (
     <main className="px-4 pt-8 pb-14">
       <SectionTitle title="My" />
-      {isLoggedIn ? <My /> : <LoginRequired message={'찜한 공연과 내 타임테이블을\n한곳에서 모아보세요'} />}
+      <Suspense>
+        <My />
+      </Suspense>
     </main>
   );
 }
 
 async function My() {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return <LoginRequired message={'찜한 공연과 내 타임테이블을\n한곳에서 모아보세요'} />;
+
+  const [followedArtistIds, likedShowIds, pickedSlotIds] = await Promise.all([
+    getFollowedArtistIds(currentUser.id),
+    getLikedShowIds(currentUser.id),
+    getPickedSlotIds(currentUser.id),
+  ]);
   const liked = sortByDate((await Promise.all(likedShowIds.map(getShow))).filter((show) => show !== undefined));
   const timetables = (
     await Promise.all(Object.entries(pickedSlotIds).map(async ([showId, slotIds]) => ({ show: await getShow(showId), count: slotIds.length })))

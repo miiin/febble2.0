@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { cloneElement, Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import AddShowToCalendar from '@/components/calendar/AddShowToCalendar';
 import Lineup from '@/components/show/Lineup';
@@ -8,7 +8,7 @@ import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
 import { getArtist, getShow, getShows } from '@/lib/catalog';
 import { formatRange, formatShort } from '@/lib/date';
-import { isLoggedIn, pickedSlotIds } from '@/mocks/session';
+import { getCurrentUser, getPickedSlotIds } from '@/lib/user';
 import { CATEGORY_LABEL, DEFAULT_TIME_ZONE, getTicketStatus, MOCK_TODAY } from '@/mocks/shows';
 
 export async function generateStaticParams() {
@@ -38,6 +38,18 @@ async function ShowDetail({ id }: { id: string }) {
     { label: '티켓 오픈', value: show.ticketOpenAt && `${formatShort(show.ticketOpenAt.slice(0, 10))} ${show.ticketOpenAt.slice(11)}` },
     { label: '가격', value: show.price },
   ].filter((row) => row.value);
+
+  const timetable = show.timetable && (
+    <Timetable
+      showId={show.id}
+      title={show.title}
+      venue={show.venue}
+      timeZone={show.timeZone ?? DEFAULT_TIME_ZONE}
+      stages={show.timetable.stages}
+      slots={show.timetable.slots}
+      artists={lineup}
+    />
+  );
 
   return (
     <main>
@@ -78,16 +90,9 @@ async function ShowDetail({ id }: { id: string }) {
           <SectionTitle title="Timetable" sub={show.timetable ? '눌러서 미리 듣고, 하트로 담아보세요' : undefined} />
           <div className="mt-3">
             {show.timetable ? (
-              <Timetable
-                showId={show.id}
-                title={show.title}
-                venue={show.venue}
-                timeZone={show.timeZone ?? DEFAULT_TIME_ZONE}
-                stages={show.timetable.stages}
-                slots={show.timetable.slots}
-                artists={lineup}
-                initialPicked={isLoggedIn ? pickedSlotIds[show.id] : undefined}
-              />
+              <Suspense fallback={timetable}>
+                <PickedTimetable showId={show.id}>{timetable!}</PickedTimetable>
+              </Suspense>
             ) : (
               <p className="border border-black px-3 py-6 text-center text-sm">시간표는 공개되는 대로 알려드릴게요.</p>
             )}
@@ -104,4 +109,11 @@ async function ShowDetail({ id }: { id: string }) {
       />
     </main>
   );
+}
+
+// 로그인했으면 담아둔 무대를 채운 타임테이블로 바꿔 그린다.
+async function PickedTimetable({ showId, children }: { showId: string; children: React.ReactElement<{ initialPicked?: string[] }> }) {
+  const user = await getCurrentUser();
+  const picked = user && (await getPickedSlotIds(user.id))[showId];
+  return picked ? cloneElement(children, { initialPicked: picked }) : children;
 }

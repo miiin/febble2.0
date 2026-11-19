@@ -1,17 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import { signOut } from 'next-auth/react';
+import { deleteAccount } from '@/app/me/account/actions';
 import BottomSheet from '@/components/ui/BottomSheet';
 
 // 로그아웃 · 회원 탈퇴. 탈퇴는 되돌릴 수 없으니 확인 시트를 한 번 더 띄운다.
 export default function AccountActions() {
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+  const [isDeleting, startDeleting] = useTransition();
 
   return (
     <>
       <div className="mt-10 flex flex-col gap-3">
-        {/* TODO: 로그인 연동 시 signOut({ callbackUrl: '/' }) */}
-        <button type="button" className="flex h-12 items-center justify-center rounded-lg border border-black text-sm">
+        <button type="button" onClick={() => signOut({ redirectTo: '/' })} className="flex h-12 items-center justify-center rounded-lg border border-black text-sm">
           로그아웃
         </button>
         <button type="button" onClick={() => setIsWithdrawOpen(true)} className="py-2 text-xs text-black/50 underline underline-offset-2">
@@ -34,9 +36,13 @@ export default function AccountActions() {
           >
             계속 쓸게요
           </button>
-          {/* TODO: 탈퇴 API 연동 */}
-          <button type="button" className="flex h-12 flex-1 items-center justify-center rounded-lg border border-black text-sm">
-            탈퇴하기
+          <button
+            type="button"
+            disabled={isDeleting}
+            onClick={() => startDeleting(() => deleteAccount())}
+            className="flex h-12 flex-1 items-center justify-center rounded-lg border border-black text-sm disabled:opacity-50"
+          >
+            {isDeleting ? '탈퇴하는 중…' : '탈퇴하기'}
           </button>
         </div>
       </BottomSheet>

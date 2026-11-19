@@ -38,7 +38,7 @@ async function ArtistDetail({ id }: { id: string }) {
             <h1 className="font-display text-[28px] leading-tight tracking-[-0.02em]">{artist.name}</h1>
             <p className="mt-1 font-plex text-xs italic">{artist.genres.join(' · ')}</p>
           </div>
-          <FollowButton />
+          <FollowButton artistId={artist.id} />
         </div>
         <p className="mt-3 text-sm leading-relaxed tracking-[-0.04em]">{artist.bio}</p>
       </div>

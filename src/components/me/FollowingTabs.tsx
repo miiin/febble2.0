@@ -76,7 +76,7 @@ export default function FollowingTabs({ news, artists }: Props) {
                   <p className="font-plex text-xs italic">{artist.genres.join(' · ')}</p>
                 </div>
               </Link>
-              <FollowButton initialFollowing />
+              <FollowButton artistId={artist.id} initialFollowing />
             </li>
           ))}
         </ul>
