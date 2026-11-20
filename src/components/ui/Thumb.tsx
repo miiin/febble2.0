@@ -10,7 +10,7 @@ type Props = {
 export default function Thumb({ src, alt, className = '' }: Props) {
   return (
     <div className={`relative shrink-0 overflow-hidden bg-neutral-200 ${className}`}>
-      {src && <Image src={src} alt={alt} fill sizes="430px" className="object-cover" />}
+      {src && <Image src={src} alt={alt} fill sizes="480px" className="object-cover" />}
     </div>
   );
 }

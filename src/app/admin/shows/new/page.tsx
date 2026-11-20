@@ -23,6 +23,8 @@ export default async function NewShowPage({ searchParams }: PageProps<'/admin/sh
             venue: report.venue,
             link: report.link,
             message: report.message,
+            source: report.source,
+            poster: report.poster,
           }
         }
       />

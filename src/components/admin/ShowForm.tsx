@@ -35,6 +35,8 @@ export type ReportForShow = {
   venue: string | null;
   link: string | null;
   message: string | null;
+  source: 'user' | 'kopis';
+  poster: string | null;
 };
 
 type Props = {
@@ -102,8 +104,8 @@ export default function ShowForm({ show, artists, report }: Props) {
   const [posterNote, setPosterNote] = useState<{ filled: string[]; newArtists: string[]; notes: string[] }>();
   const [isReading, startReading] = useTransition();
 
-  // 포스터에서 읽은 값은 비어 있는 칸에만 넣는다 (이미 적은 값은 건드리지 않는다). 저장은 사람이 확인한 뒤.
-  const applyDraft = (draft: ShowDraft) => {
+  // 포스터·제보에서 읽은 값은 비어 있는 칸에만 넣는다 (이미 적은 값은 건드리지 않는다). 저장은 사람이 확인한 뒤.
+  const applyDraft = (draft: ShowDraft, from: string) => {
     // 지금 폼 값에서 바로 계산한다 (setForm 콜백 안에서 세면 알림을 띄울 때 아직 비어 있다).
     const filled: string[] = [];
     const prev = form;
@@ -113,6 +115,8 @@ export default function ShowForm({ show, artists, report }: Props) {
       next[key] = value;
       filled.push(label);
     };
+    // id 는 새 공연에서만 정한다 (만든 뒤에는 바꿀 수 없다).
+    if (!show) fill('id', draft.slug, 'id');
     fill('title', draft.title, '공연 이름');
     // 분류·시간대는 기본값이 있어서, 새 공연이거나 기본값 그대로일 때만 바꾼다.
     fill('category', draft.category, '분류', !show);
@@ -136,7 +140,7 @@ export default function ShowForm({ show, artists, report }: Props) {
     const newArtists = draft.lineup.filter((item) => !item.artistId).map((item) => item.name);
     const vendorNotes = draft.ticketVendors.some((vendor) => !vendor.url) ? ['예매처 주소가 자료에 없어서 비워뒀어요. 저장 전에 채워주세요.'] : [];
     setPosterNote({ filled, newArtists, notes: [...draft.notes, ...vendorNotes] });
-    toast.success(filled.length ? `포스터에서 ${filled.length}개 항목을 채웠어요. 확인해주세요.` : '새로 채울 항목이 없었어요');
+    toast.success(filled.length ? `${from}에서 ${filled.length}개 항목을 채웠어요. 확인해주세요.` : '새로 채울 항목이 없었어요');
   };
 
   // 타임테이블 이미지: 기존 무대는 두고 추가만 한다. 같은 이름의 스테이지는 그대로 쓰고,
@@ -218,14 +222,18 @@ export default function ShowForm({ show, artists, report }: Props) {
         draft: undefined,
         linkNote: undefined,
       }));
-      if (result.draft) applyDraft({ ...result.draft, notes: [...(result.linkNote ? [result.linkNote] : []), ...result.draft.notes] });
+      if (result.draft)
+        applyDraft(
+          { ...result.draft, notes: [...(result.linkNote ? [result.linkNote] : []), ...result.draft.notes] },
+          report!.source === 'kopis' ? 'KOPIS 정보' : '제보',
+        );
       else toast.error(result.error);
     });
 
   const read = () =>
     startReading(async () => {
       const result = await readPoster(form.image).catch(() => ({ error: '포스터를 읽지 못했어요. 잠시 뒤 다시 시도해주세요.', draft: undefined }));
-      if (result.draft) applyDraft(result.draft);
+      if (result.draft) applyDraft(result.draft, '포스터');
       else toast.error(result.error);
     });
 
@@ -254,7 +262,14 @@ export default function ShowForm({ show, artists, report }: Props) {
   return (
     <form onSubmit={submit} className="mt-6 grid gap-6">
       {report && (
-        <Section title="Report" description="사용자가 보낸 제보예요. AI 가 제보와 참고 링크 페이지를 읽어 비어 있는 칸을 채워줘요.">
+        <Section
+          title="Report"
+          description={
+            report.source === 'kopis'
+              ? 'KOPIS(공연예술통합전산망)에서 가져온 공연이에요. AI 가 KOPIS 상세 정보(출연진·가격·시간·예매처)로 비어 있는 칸을 채워줘요.'
+              : '사용자가 보낸 제보예요. AI 가 제보와 참고 링크 페이지를 읽어 비어 있는 칸을 채워줘요.'
+          }
+        >
           <dl className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-1.5 rounded-md border bg-muted/40 p-3 text-sm">
             {(
               [
@@ -272,6 +287,16 @@ export default function ShowForm({ show, artists, report }: Props) {
                   <dd className="whitespace-pre-line">{value}</dd>
                 </div>
               ))}
+            {report.poster && (
+              <>
+                <dt className="text-xs text-muted-foreground">포스터</dt>
+                <dd>
+                  <a href={report.poster} target="_blank" rel="noreferrer" className="underline">
+                    KOPIS 포스터 보기
+                  </a>
+                </dd>
+              </>
+            )}
             {report.link && (
               <>
                 <dt className="text-xs text-muted-foreground">참고 링크</dt>
@@ -285,7 +310,7 @@ export default function ShowForm({ show, artists, report }: Props) {
           </dl>
           <div className="flex items-center gap-3">
             <Button type="button" variant="outline" disabled={isReading} onClick={readReport}>
-              <Sparkles /> {isReading ? '제보 읽는 중…' : '제보로 정보 채우기'}
+              <Sparkles /> {isReading ? '읽는 중…' : report.source === 'kopis' ? 'KOPIS 정보로 채우기' : '제보로 정보 채우기'}
             </Button>
             <p className="text-[11px] text-muted-foreground">비어 있는 칸만 채워요. 포스터가 있으면 아래에서 포스터로도 채울 수 있어요.</p>
           </div>
@@ -728,7 +753,8 @@ export default function ShowForm({ show, artists, report }: Props) {
         </Section>
       )}
 
-      <div className="sticky bottom-0 -mx-6 flex items-center gap-2 border-t bg-background/95 px-6 py-3 backdrop-blur">
+      {/* 긴 폼에서도 저장 버튼이 보이게 아래에 붙인다. 배경은 페이지와 같은 색 (스크롤하는 내용이 비치지 않게 불투명). */}
+      <div className="admin-page-bg sticky bottom-0 flex items-center gap-2 border-t py-3">
         {error && <p className="mr-auto text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={isPending} className={error ? '' : 'ml-auto'}>
           {isPending ? '저장 중…' : '저장'}

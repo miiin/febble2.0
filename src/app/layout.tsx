@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist, IBM_Plex_Sans, IBM_Plex_Sans_KR, Instrument_Serif, Inter_Tight } from 'next/font/google';
+import { Geist, IBM_Plex_Sans, IBM_Plex_Sans_KR, Instrument_Serif, Inter_Tight, Roboto } from 'next/font/google';
 import AuthSessionProvider from '@/components/auth/AuthSessionProvider';
 import LoginSheetProvider from '@/components/auth/LoginSheetProvider';
 import UserStateProvider from '@/components/auth/UserStateProvider';
@@ -10,6 +10,8 @@ const plexLatin = IBM_Plex_Sans({ weight: '400', style: 'italic', variable: '--f
 const geist = Geist({ variable: '--font-geist', subsets: ['latin'] });
 const instrumentSerif = Instrument_Serif({ weight: '400', style: 'italic', variable: '--font-instrument-serif', subsets: ['latin'] });
 const interTight = Inter_Tight({ weight: '700', variable: '--font-inter-tight', subsets: ['latin'] });
+// Google 로그인 버튼 글꼴 (브랜드 가이드: Roboto Medium)
+const roboto = Roboto({ weight: '500', variable: '--font-roboto', subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Febble',
@@ -22,7 +24,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-const fontVariables = [plexKr, plexLatin, geist, instrumentSerif, interTight].map((font) => font.variable).join(' ');
+const fontVariables = [plexKr, plexLatin, geist, instrumentSerif, interTight, roboto].map((font) => font.variable).join(' ');
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
