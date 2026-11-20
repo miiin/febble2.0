@@ -50,7 +50,7 @@ const columns: ColumnDef<ShowRow>[] = [
     cell: ({ row }) => (
       <span className="space-x-1">
         <StatusPill on={row.original.isPublished} />
-        {row.original.soldOut && <StatusPill on onLabel="매진" />}
+        {row.original.soldOut && <StatusPill on onLabel="매진" tone="soldOut" />}
       </span>
     ),
   },

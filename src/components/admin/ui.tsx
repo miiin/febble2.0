@@ -49,6 +49,27 @@ export function Section({ title, description, children }: { title: string; descr
   );
 }
 
-export function StatusPill({ on, onLabel = '공개', offLabel = '비공개' }: { on: boolean; onLabel?: string; offLabel?: string }) {
-  return <Badge variant={on ? 'default' : 'outline'}>{on ? onLabel : offLabel}</Badge>;
+// 켜졌을 때 색. default: 공개(검정), pick: 추천(브랜드 노랑), soldOut: 매진(연한 빨강)
+const PILL_TONE = {
+  default: '',
+  pick: 'bg-brand-yellow text-black',
+  soldOut: 'border-red-200 bg-red-50 text-red-700',
+} as const;
+
+export function StatusPill({
+  on,
+  onLabel = '공개',
+  offLabel = '비공개',
+  tone = 'default',
+}: {
+  on: boolean;
+  onLabel?: string;
+  offLabel?: string;
+  tone?: keyof typeof PILL_TONE;
+}) {
+  return (
+    <Badge variant={on ? 'default' : 'outline'} className={on ? PILL_TONE[tone] : undefined}>
+      {on ? onLabel : offLabel}
+    </Badge>
+  );
 }

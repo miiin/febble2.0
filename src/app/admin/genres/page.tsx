@@ -12,9 +12,9 @@ export default async function AdminGenresPage() {
   const genres = [...byGenre].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
 
   return (
-    <>
+    <div className="mx-auto max-w-3xl">
       <PageHeader title="Genres" />
-      <div className="mt-6 grid max-w-3xl gap-6">
+      <div className="mt-6 grid gap-6">
         <Section title="Rules" description="추천은 장르 글자가 같은 아티스트끼리 묶어요. 같은 장르는 같은 글자로 적어주세요.">
           <ul className="list-disc pl-4 text-xs leading-relaxed">
             <li>한글, 외래어 표기법: 록(락 ✗), 팝, 포크, 슈게이즈</li>
@@ -41,6 +41,6 @@ export default async function AdminGenresPage() {
           <GenreCleanup />
         </Section>
       </div>
-    </>
+    </div>
   );
 }

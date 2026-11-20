@@ -38,7 +38,7 @@ const columns: ColumnDef<ArtistRow>[] = [
     header: '에디터 추천',
     filterFn: 'equalsString',
     enableSorting: false,
-    cell: ({ row }) => row.original.isEditorPick && <StatusPill on onLabel="추천" />,
+    cell: ({ row }) => row.original.isEditorPick && <StatusPill on onLabel="추천" tone="pick" />,
   },
   {
     id: 'spotify',

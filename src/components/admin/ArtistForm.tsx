@@ -62,7 +62,7 @@ export default function ArtistForm({ artist, knownGenres }: Props) {
     });
 
   return (
-    <form onSubmit={onSubmit} className="mt-6 grid max-w-2xl gap-6">
+    <form onSubmit={onSubmit} className="mt-6 grid gap-6">
       <Section title="Info">
         {!artist && (
           <Field label="id (주소)" htmlFor="id" hint="영문 소문자·숫자·하이픈. /artists/[id] 주소가 되고 나중에 바꿀 수 없어요.">

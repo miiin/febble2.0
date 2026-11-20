@@ -7,9 +7,9 @@ export default async function NewPickPage() {
   await requireAdmin();
   const [issues, shows] = await Promise.all([listPickIssues(), listShowOptions()]);
   return (
-    <>
+    <div className="mx-auto max-w-3xl">
       <PageHeader title="New issue" />
       <PickForm nextVol={(issues[0]?.vol ?? 0) + 1} shows={shows} />
-    </>
+    </div>
   );
 }

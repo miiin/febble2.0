@@ -10,9 +10,9 @@ import DatePicker from '@/components/admin/DatePicker';
 import SearchSelect from '@/components/admin/SearchSelect';
 import { Field, Section } from '@/components/admin/ui';
 import { Button } from '@/components/shadcn/button';
-import { Checkbox } from '@/components/shadcn/checkbox';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
+import { Switch } from '@/components/shadcn/switch';
 import { Textarea } from '@/components/shadcn/textarea';
 import { deletePick, type PickInput, savePick } from '@/lib/admin/pickActions';
 import { draftPickComment } from '@/lib/admin/pickAI';
@@ -87,7 +87,7 @@ export default function PickForm({ issue, nextVol, shows }: Props) {
     });
 
   return (
-    <form onSubmit={submit} className="mt-6 grid max-w-3xl gap-6">
+    <form onSubmit={submit} className="mt-6 grid gap-6">
       <Section title="Issue">
         <div className="grid grid-cols-4 gap-4">
           <Field label="호수" htmlFor="vol">
@@ -107,15 +107,11 @@ export default function PickForm({ issue, nextVol, shows }: Props) {
           <Field label="큐레이터" htmlFor="curator">
             <Input id="curator" required value={form.curator} onChange={(e) => setForm({ ...form, curator: e.target.value })} />
           </Field>
-          <Field label="공개">
+          <Field label="상태">
             <div className="flex h-9 items-center gap-2">
-              <Checkbox
-                id="pickPublished"
-                checked={form.isPublished}
-                onCheckedChange={(checked) => setForm({ ...form, isPublished: checked === true })}
-              />
+              <Switch id="pickPublished" checked={form.isPublished} onCheckedChange={(isPublished) => setForm({ ...form, isPublished })} />
               <Label htmlFor="pickPublished" className="font-normal">
-                사이트에 보이기
+                {form.isPublished ? '공개' : '비공개'}
               </Label>
             </div>
           </Field>
@@ -202,7 +198,7 @@ export default function PickForm({ issue, nextVol, shows }: Props) {
         {issue && (
           <ConfirmButton
             title={`${formatVol(issue.vol)} 을(를) 지울까요?`}
-            description="되돌릴 수 없어요. 숨기기만 하려면 ‘사이트에 보이기’를 끄고 저장하세요."
+            description="되돌릴 수 없어요. 숨기기만 하려면 ‘공개’ 스위치를 끄고 저장하세요."
             onConfirm={remove}
             disabled={isPending}
             variant="outline"

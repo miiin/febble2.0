@@ -14,6 +14,7 @@ import { Button } from '@/components/shadcn/button';
 import { Checkbox } from '@/components/shadcn/checkbox';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
+import { Switch } from '@/components/shadcn/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/shadcn/table';
 import { Textarea } from '@/components/shadcn/textarea';
 import type { ShowForEdit } from '@/lib/admin/queries';
@@ -340,11 +341,11 @@ export default function ShowForm({ show, artists, report }: Props) {
               <option value="festival">페스티벌</option>
             </select>
           </Field>
-          <Field label="공개">
+          <Field label="상태">
             <div className="flex h-9 items-center gap-2">
-              <Checkbox id="isPublished" checked={form.isPublished} onCheckedChange={(checked) => set('isPublished', checked === true)} />
+              <Switch id="isPublished" checked={form.isPublished} onCheckedChange={(checked) => set('isPublished', checked)} />
               <Label htmlFor="isPublished" className="font-normal">
-                사이트에 보이기
+                {form.isPublished ? '공개' : '비공개'}
               </Label>
             </div>
           </Field>
