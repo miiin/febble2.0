@@ -26,7 +26,17 @@ type Props = {
 };
 
 // 되돌릴 수 없는 동작(삭제 등) 앞에 확인 다이얼로그를 띄우는 버튼.
-export default function ConfirmButton({ title, description, confirmLabel = '삭제', onConfirm, disabled, children, variant = 'destructive', size, className }: Props) {
+export default function ConfirmButton({
+  title,
+  description,
+  confirmLabel = '삭제',
+  onConfirm,
+  disabled,
+  children,
+  variant = 'destructive',
+  size,
+  className,
+}: Props) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>

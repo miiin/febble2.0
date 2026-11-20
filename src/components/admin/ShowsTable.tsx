@@ -29,8 +29,17 @@ const columns: ColumnDef<ShowRow>[] = [
       </Link>
     ),
   },
-  { accessorKey: 'category', header: '분류', filterFn: 'equalsString', cell: ({ row }) => <span className="text-xs">{CATEGORY_LABEL[row.original.category]}</span> },
-  { accessorKey: 'startDate', header: '일시', cell: ({ row }) => <span className="text-xs">{formatRange(row.original.startDate, row.original.endDate)}</span> },
+  {
+    accessorKey: 'category',
+    header: '분류',
+    filterFn: 'equalsString',
+    cell: ({ row }) => <span className="text-xs">{CATEGORY_LABEL[row.original.category]}</span>,
+  },
+  {
+    accessorKey: 'startDate',
+    header: '일시',
+    cell: ({ row }) => <span className="text-xs">{formatRange(row.original.startDate, row.original.endDate)}</span>,
+  },
   { accessorKey: 'venue', header: '장소', enableSorting: false, cell: ({ row }) => <span className="text-xs">{row.original.venue}</span> },
   {
     id: 'status',

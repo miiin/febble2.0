@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
+import { useRef, useState, useTransition } from 'react';
+import { ArrowDown, ArrowUp, Plus, Sparkles, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import ConfirmButton from '@/components/admin/ConfirmButton';
 import DatePicker, { DateTimePicker } from '@/components/admin/DatePicker';
+import ImageUpload, { shrinkImage } from '@/components/admin/ImageUpload';
 import SearchSelect from '@/components/admin/SearchSelect';
 import { Field, Section, selectClass } from '@/components/admin/ui';
 import { Button } from '@/components/shadcn/button';
@@ -16,13 +17,30 @@ import { Label } from '@/components/shadcn/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/shadcn/table';
 import { Textarea } from '@/components/shadcn/textarea';
 import type { ShowForEdit } from '@/lib/admin/queries';
+import { readPoster } from '@/lib/admin/posterAI';
+import { setReportStatus } from '@/lib/admin/reportActions';
+import { draftFromReport } from '@/lib/admin/reportAI';
+import type { ShowDraft } from '@/lib/admin/showDraft';
 import { deleteShow, saveShow, type ShowInput } from '@/lib/admin/showActions';
+import { readTimetable, type TimetableDraft } from '@/lib/admin/timetableAI';
 
 type Option = { id: string; name: string };
+
+export type ReportForShow = {
+  id: number;
+  title: string;
+  artist: string | null;
+  date: string | null;
+  venue: string | null;
+  link: string | null;
+  message: string | null;
+};
 
 type Props = {
   show?: ShowForEdit;
   artists: Option[];
+  /** 제보에서 만들 때: 폼 위에 제보를 보여주고, 저장하면 제보를 '추가함'으로 바꾼다 */
+  report?: ReportForShow;
 };
 
 const TIME_ZONES = ['Asia/Seoul', 'Asia/Tokyo', 'Asia/Taipei', 'Asia/Bangkok', 'Europe/London', 'America/New_York', 'America/Los_Angeles'];
@@ -72,7 +90,7 @@ const move = <T,>(list: T[], index: number, delta: number) => {
 };
 
 // 공연 편집: 기본 정보, 라인업, 예매처, (페스티벌) 타임테이블을 한 번에 저장한다.
-export default function ShowForm({ show, artists }: Props) {
+export default function ShowForm({ show, artists, report }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<ShowInput>(() => toInput(show));
   const [error, setError] = useState<string>();
@@ -80,6 +98,135 @@ export default function ShowForm({ show, artists }: Props) {
   const set = <K extends keyof ShowInput>(key: K, value: ShowInput[K]) => setForm((prev) => ({ ...prev, [key]: value }));
   const artistName = (id: string) => artists.find((artist) => artist.id === id)?.name ?? id;
   const artistOptions = artists.map((artist) => ({ value: artist.id, label: artist.name }));
+  const [posterNote, setPosterNote] = useState<{ filled: string[]; newArtists: string[]; notes: string[] }>();
+  const [isReading, startReading] = useTransition();
+
+  // 포스터에서 읽은 값은 비어 있는 칸에만 넣는다 (이미 적은 값은 건드리지 않는다). 저장은 사람이 확인한 뒤.
+  const applyDraft = (draft: ShowDraft) => {
+    // 지금 폼 값에서 바로 계산한다 (setForm 콜백 안에서 세면 알림을 띄울 때 아직 비어 있다).
+    const filled: string[] = [];
+    const prev = form;
+    const next = { ...prev };
+    const fill = <K extends keyof ShowInput>(key: K, value: ShowInput[K] | null, label: string, isEmpty = !prev[key]) => {
+      if (value === null || value === '' || !isEmpty) return;
+      next[key] = value;
+      filled.push(label);
+    };
+    fill('title', draft.title, '공연 이름');
+    // 분류·시간대는 기본값이 있어서, 새 공연이거나 기본값 그대로일 때만 바꾼다.
+    fill('category', draft.category, '분류', !show);
+    fill('startDate', draft.startDate, '시작일');
+    fill('endDate', draft.endDate, '종료일');
+    fill('startTime', draft.startTime, '시작 시각');
+    fill('venue', draft.venue, '장소');
+    fill('timeZone', draft.timeZone, '시간대', prev.timeZone === 'Asia/Seoul' && draft.timeZone !== 'Asia/Seoul');
+    fill('price', draft.price, '가격');
+    fill('ticketOpenAt', draft.ticketOpenAt, '티켓 오픈');
+    if (prev.vendors.length === 0 && draft.ticketVendors.length > 0) {
+      next.vendors = draft.ticketVendors.map((vendor) => ({ name: vendor.name, url: vendor.url ?? '' }));
+      filled.push('예매처');
+    }
+    const matched = draft.lineup.flatMap((item) => (item.artistId && !prev.artistIds.includes(item.artistId) ? [item.artistId] : []));
+    if (matched.length > 0) {
+      next.artistIds = [...prev.artistIds, ...new Set(matched)];
+      filled.push(`라인업 ${matched.length}명`);
+    }
+    setForm(next);
+    const newArtists = draft.lineup.filter((item) => !item.artistId).map((item) => item.name);
+    const vendorNotes = draft.ticketVendors.some((vendor) => !vendor.url) ? ['예매처 주소가 자료에 없어서 비워뒀어요. 저장 전에 채워주세요.'] : [];
+    setPosterNote({ filled, newArtists, notes: [...draft.notes, ...vendorNotes] });
+    toast.success(filled.length ? `포스터에서 ${filled.length}개 항목을 채웠어요. 확인해주세요.` : '새로 채울 항목이 없었어요');
+  };
+
+  // 타임테이블 이미지: 기존 무대는 두고 추가만 한다. 같은 이름의 스테이지는 그대로 쓰고,
+  // 같은 스테이지·날짜·시작 시각의 무대는 건너뛴다.
+  const timetableInput = useRef<HTMLInputElement>(null);
+  const [timetableNote, setTimetableNote] = useState<{ summary: string; unmatched: string[]; notes: string[] }>();
+  const applyTimetable = (draft: TimetableDraft) => {
+    const stages = [...form.stages];
+    const keyOf = (name: string) => {
+      const found = stages.find((stage) => stage.name.trim().toLowerCase() === name.toLowerCase());
+      if (found) return found.key;
+      const stage = { key: newKey(), name };
+      stages.push(stage);
+      return stage.key;
+    };
+    const newStages = draft.stages.filter((name) => !form.stages.some((stage) => stage.name.trim().toLowerCase() === name.toLowerCase())).length;
+    draft.stages.forEach(keyOf); // 스테이지 순서대로 먼저 만든다
+    const exists = new Set(form.slots.map((slot) => `${slot.stageKey}|${slot.date}|${slot.start}`));
+    const added = draft.slots.flatMap((slot) => {
+      const stageKey = keyOf(slot.stage);
+      const id = `${stageKey}|${slot.date}|${slot.start}`;
+      if (exists.has(id)) return [];
+      exists.add(id);
+      return [{ stageKey, artistId: slot.artistId ?? '', date: slot.date, start: slot.start, end: slot.end }];
+    });
+    const addedIds = new Set(added.map((slot) => `${slot.stageKey}|${slot.date}|${slot.start}`));
+    const stageOrder = (key: string) => stages.findIndex((stage) => stage.key === key);
+    const slots = [...form.slots, ...added].sort(
+      (a, b) => (a.date + a.start).localeCompare(b.date + b.start) || stageOrder(a.stageKey) - stageOrder(b.stageKey),
+    );
+    const lineupAdds = [...new Set(added.map((slot) => slot.artistId).filter((id) => id && !form.artistIds.includes(id)))];
+    setForm({ ...form, stages, slots, artistIds: [...form.artistIds, ...lineupAdds] });
+
+    const skipped = draft.slots.length - added.length;
+    setTimetableNote({
+      summary: [
+        `무대 ${added.length}개 추가`,
+        newStages && `스테이지 ${newStages}개 추가`,
+        skipped && `이미 있는 무대 ${skipped}개 건너뜀`,
+        lineupAdds.length && `라인업에 ${lineupAdds.length}명 추가`,
+        draft.dropped && `읽기 어려운 ${draft.dropped}개 제외`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      // 이번에 실제로 추가한 무대 중 아티스트를 못 찾은 것만
+      unmatched: [
+        ...new Set(
+          draft.slots
+            .filter((slot) => !slot.artistId && addedIds.has(`${keyOf(slot.stage)}|${slot.date}|${slot.start}`))
+            .map((slot) => slot.artistName),
+        ),
+      ],
+      notes: [...draft.notes, ...(added.some((slot) => !slot.end) ? ['끝 시각이 없는 무대가 있어요. 채워주세요.'] : [])],
+    });
+    toast.success(added.length ? `무대 ${added.length}개를 추가했어요. 확인해주세요.` : '새로 추가할 무대가 없었어요');
+  };
+
+  const readTimetableImage = (file: File | undefined) => {
+    if (!file) return;
+    startReading(async () => {
+      const formData = new FormData();
+      formData.set('file', await shrinkImage(file));
+      formData.set('startDate', form.startDate);
+      formData.set('endDate', form.endDate);
+      formData.set('lineup', form.artistIds.join(','));
+      const result = await readTimetable(formData).catch(() => ({
+        error: '타임테이블을 읽지 못했어요. 잠시 뒤 다시 시도해주세요.',
+        draft: undefined,
+      }));
+      if (result.draft) applyTimetable(result.draft);
+      else toast.error(result.error);
+    });
+  };
+
+  const readReport = () =>
+    startReading(async () => {
+      const result = await draftFromReport(report!.id).catch(() => ({
+        error: '제보를 읽지 못했어요. 잠시 뒤 다시 시도해주세요.',
+        draft: undefined,
+        linkNote: undefined,
+      }));
+      if (result.draft) applyDraft({ ...result.draft, notes: [...(result.linkNote ? [result.linkNote] : []), ...result.draft.notes] });
+      else toast.error(result.error);
+    });
+
+  const read = () =>
+    startReading(async () => {
+      const result = await readPoster(form.image).catch(() => ({ error: '포스터를 읽지 못했어요. 잠시 뒤 다시 시도해주세요.', draft: undefined }));
+      if (result.draft) applyDraft(result.draft);
+      else toast.error(result.error);
+    });
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -87,7 +234,8 @@ export default function ShowForm({ show, artists }: Props) {
       const result = await saveShow(show?.id ?? null, form);
       setError(result.error);
       if (result.error) return;
-      toast.success(show ? '저장했어요' : '공연을 추가했어요');
+      if (report) await setReportStatus(report.id, 'added').catch(() => toast.error('제보 상태는 바꾸지 못했어요. 제보 화면에서 바꿔주세요.'));
+      toast.success(show ? '저장했어요' : report ? '공연을 추가하고 제보를 ‘추가함’으로 바꿨어요' : '공연을 추가했어요');
       if (show) router.refresh();
       else router.push(`/admin/shows/${result.id}`);
     });
@@ -104,6 +252,75 @@ export default function ShowForm({ show, artists }: Props) {
 
   return (
     <form onSubmit={submit} className="mt-6 grid gap-6">
+      {report && (
+        <Section title="Report" description="사용자가 보낸 제보예요. AI 가 제보와 참고 링크 페이지를 읽어 비어 있는 칸을 채워줘요.">
+          <dl className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-1.5 rounded-md border bg-muted/40 p-3 text-sm">
+            {(
+              [
+                ['공연 이름', report.title],
+                ['아티스트', report.artist],
+                ['날짜', report.date],
+                ['장소', report.venue],
+                ['하고 싶은 말', report.message],
+              ] as const
+            )
+              .filter(([, value]) => value)
+              .map(([label, value]) => (
+                <div key={label} className="contents">
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className="whitespace-pre-line">{value}</dd>
+                </div>
+              ))}
+            {report.link && (
+              <>
+                <dt className="text-xs text-muted-foreground">참고 링크</dt>
+                <dd className="truncate">
+                  <a href={report.link} target="_blank" rel="noreferrer" className="underline">
+                    {report.link}
+                  </a>
+                </dd>
+              </>
+            )}
+          </dl>
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="outline" disabled={isReading} onClick={readReport}>
+              <Sparkles /> {isReading ? '제보 읽는 중…' : '제보로 정보 채우기'}
+            </Button>
+            <p className="text-[11px] text-muted-foreground">비어 있는 칸만 채워요. 포스터가 있으면 아래에서 포스터로도 채울 수 있어요.</p>
+          </div>
+        </Section>
+      )}
+
+      <Section title="Poster" description="포스터를 올리면 공연 대표 이미지가 되고, AI 가 포스터를 읽어 비어 있는 칸을 채워줘요.">
+        <ImageUpload folder="shows" value={form.image} onChange={(url) => set('image', url)} />
+        <div className="flex items-center gap-3">
+          <Button type="button" variant="outline" disabled={!form.image || isReading} onClick={read}>
+            <Sparkles /> {isReading ? '포스터 읽는 중… (10~30초)' : '포스터로 정보 채우기'}
+          </Button>
+          <p className="text-[11px] text-muted-foreground">비어 있는 칸만 채워요. 저장 전에 꼭 확인해주세요.</p>
+        </div>
+        {posterNote && (
+          <div className="grid gap-1.5 rounded-md border bg-muted/40 p-3 text-xs">
+            <p>
+              <span className="font-medium">채운 항목</span> · {posterNote.filled.join(', ') || '없음'}
+            </p>
+            {posterNote.newArtists.length > 0 && (
+              <p>
+                <span className="font-medium">목록에 없는 아티스트</span> · {posterNote.newArtists.join(', ')} —{' '}
+                <Link href="/admin/artists/new" target="_blank" className="underline">
+                  추가하기
+                </Link>
+              </p>
+            )}
+            {posterNote.notes.map((note) => (
+              <p key={note} className="text-muted-foreground">
+                · {note}
+              </p>
+            ))}
+          </div>
+        )}
+      </Section>
+
       <Section title="Info">
         {!show && (
           <Field label="id (주소)" htmlFor="show-id" hint="영문 소문자·숫자·하이픈. /shows/[id] 주소가 되고 나중에 바꿀 수 없어요.">
@@ -112,7 +329,12 @@ export default function ShowForm({ show, artists }: Props) {
         )}
         <div className="grid grid-cols-2 gap-4">
           <Field label="분류" htmlFor="category">
-            <select id="category" value={form.category} onChange={(e) => set('category', e.target.value as ShowInput['category'])} className={selectClass}>
+            <select
+              id="category"
+              value={form.category}
+              onChange={(e) => set('category', e.target.value as ShowInput['category'])}
+              className={selectClass}
+            >
               <option value="indie">국내 인디</option>
               <option value="overseas">내한</option>
               <option value="festival">페스티벌</option>
@@ -132,7 +354,13 @@ export default function ShowForm({ show, artists }: Props) {
         </Field>
         <div className="grid grid-cols-3 gap-4">
           <Field label="시작일" htmlFor="startDate">
-            <DatePicker id="startDate" value={form.startDate} onChange={(value) => setForm((prev) => ({ ...prev, startDate: value, endDate: prev.endDate && prev.endDate >= value ? prev.endDate : value }))} />
+            <DatePicker
+              id="startDate"
+              value={form.startDate}
+              onChange={(value) =>
+                setForm((prev) => ({ ...prev, startDate: value, endDate: prev.endDate && prev.endDate >= value ? prev.endDate : value }))
+              }
+            />
           </Field>
           <Field label="종료일" htmlFor="endDate">
             <DatePicker id="endDate" value={form.endDate} min={form.startDate || undefined} onChange={(value) => set('endDate', value)} />
@@ -156,15 +384,18 @@ export default function ShowForm({ show, artists }: Props) {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="티켓 오픈" htmlFor="ticketOpenAt" hint="공연 현지 시각">
-            <DateTimePicker id="ticketOpenAt" value={form.ticketOpenAt} onChange={(value) => set('ticketOpenAt', value)} placeholder="정해지면 입력" clearable />
+            <DateTimePicker
+              id="ticketOpenAt"
+              value={form.ticketOpenAt}
+              onChange={(value) => set('ticketOpenAt', value)}
+              placeholder="정해지면 입력"
+              clearable
+            />
           </Field>
           <Field label="가격" htmlFor="price" hint="화면에 그대로 보여요">
             <Input id="price" value={form.price} onChange={(e) => set('price', e.target.value)} placeholder="55,000원" />
           </Field>
         </div>
-        <Field label="이미지 주소" htmlFor="image" hint="public/images 아래 경로(/images/...) 또는 https 주소">
-          <Input id="image" value={form.image} onChange={(e) => set('image', e.target.value)} />
-        </Field>
         <Field label="소개" htmlFor="description">
           <Textarea id="description" rows={3} value={form.description} onChange={(e) => set('description', e.target.value)} />
         </Field>
@@ -183,7 +414,14 @@ export default function ShowForm({ show, artists }: Props) {
               <li key={artistId} className="flex items-center gap-2 px-3 py-1.5 text-sm">
                 <span className="w-5 text-xs text-muted-foreground">{index + 1}</span>
                 <span className="flex-1">{artistName(artistId)}</span>
-                <Button type="button" size="icon-sm" variant="ghost" aria-label="위로" disabled={index === 0} onClick={() => set('artistIds', move(form.artistIds, index, -1))}>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="위로"
+                  disabled={index === 0}
+                  onClick={() => set('artistIds', move(form.artistIds, index, -1))}
+                >
                   <ArrowUp />
                 </Button>
                 <Button
@@ -196,7 +434,18 @@ export default function ShowForm({ show, artists }: Props) {
                 >
                   <ArrowDown />
                 </Button>
-                <Button type="button" size="icon-sm" variant="ghost" aria-label={`${artistName(artistId)} 빼기`} onClick={() => set('artistIds', form.artistIds.filter((id) => id !== artistId))}>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label={`${artistName(artistId)} 빼기`}
+                  onClick={() =>
+                    set(
+                      'artistIds',
+                      form.artistIds.filter((id) => id !== artistId),
+                    )
+                  }
+                >
                   <X />
                 </Button>
               </li>
@@ -226,18 +475,39 @@ export default function ShowForm({ show, artists }: Props) {
           <div key={index} className="flex gap-2">
             <Input
               value={vendor.name}
-              onChange={(e) => set('vendors', form.vendors.map((v, i) => (i === index ? { ...v, name: e.target.value } : v)))}
+              onChange={(e) =>
+                set(
+                  'vendors',
+                  form.vendors.map((v, i) => (i === index ? { ...v, name: e.target.value } : v)),
+                )
+              }
               className="max-w-44"
               placeholder="인터파크 티켓"
               aria-label="예매처 이름"
             />
             <Input
               value={vendor.url}
-              onChange={(e) => set('vendors', form.vendors.map((v, i) => (i === index ? { ...v, url: e.target.value } : v)))}
+              onChange={(e) =>
+                set(
+                  'vendors',
+                  form.vendors.map((v, i) => (i === index ? { ...v, url: e.target.value } : v)),
+                )
+              }
               placeholder="https://"
               aria-label="예매 주소"
             />
-            <Button type="button" size="icon" variant="ghost" aria-label="예매처 빼기" onClick={() => set('vendors', form.vendors.filter((_, i) => i !== index))}>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="예매처 빼기"
+              onClick={() =>
+                set(
+                  'vendors',
+                  form.vendors.filter((_, i) => i !== index),
+                )
+              }
+            >
               <X />
             </Button>
           </div>
@@ -249,17 +519,71 @@ export default function ShowForm({ show, artists }: Props) {
 
       {form.category === 'festival' && (
         <Section title="Timetable" description="스테이지나 무대를 지우고 저장하면, 사용자가 그 무대를 담아둔 기록도 같이 지워져요.">
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isReading || !form.startDate || !form.endDate}
+              onClick={() => timetableInput.current?.click()}
+            >
+              <Sparkles /> {isReading ? '타임테이블 읽는 중… (20~60초)' : '타임테이블 이미지로 채우기'}
+            </Button>
+            <p className="text-[11px] text-muted-foreground">
+              {form.startDate && form.endDate
+                ? '기존 무대는 그대로 두고 추가만 해요. 이미지는 저장하지 않아요.'
+                : '공연 시작일·종료일을 먼저 정해주세요.'}
+            </p>
+            <input
+              ref={timetableInput}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                readTimetableImage(e.target.files?.[0]);
+                e.target.value = '';
+              }}
+            />
+          </div>
+          {timetableNote && (
+            <div className="grid gap-1.5 rounded-md border bg-muted/40 p-3 text-xs" data-testid="timetable-note">
+              <p>
+                <span className="font-medium">읽은 결과</span> · {timetableNote.summary}
+              </p>
+              {timetableNote.unmatched.length > 0 && (
+                <p>
+                  <span className="font-medium">목록에 없는 아티스트</span> · {timetableNote.unmatched.join(', ')} — 무대의 아티스트 칸이 비어 있어요.{' '}
+                  <Link href="/admin/artists/new" target="_blank" className="underline">
+                    추가하기
+                  </Link>
+                </p>
+              )}
+              {timetableNote.notes.map((note) => (
+                <p key={note} className="text-muted-foreground">
+                  · {note}
+                </p>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium">스테이지</span>
             {form.stages.map((stage, index) => {
               const used = form.slots.filter((slot) => slot.stageKey === stage.key).length;
               const removeStage = () =>
-                setForm((prev) => ({ ...prev, stages: prev.stages.filter((s) => s.key !== stage.key), slots: prev.slots.filter((slot) => slot.stageKey !== stage.key) }));
+                setForm((prev) => ({
+                  ...prev,
+                  stages: prev.stages.filter((s) => s.key !== stage.key),
+                  slots: prev.slots.filter((slot) => slot.stageKey !== stage.key),
+                }));
               return (
                 <span key={stage.key} className="flex items-center rounded-md border">
                   <Input
                     value={stage.name}
-                    onChange={(e) => set('stages', form.stages.map((s, i) => (i === index ? { ...s, name: e.target.value } : s)))}
+                    onChange={(e) =>
+                      set(
+                        'stages',
+                        form.stages.map((s, i) => (i === index ? { ...s, name: e.target.value } : s)),
+                      )
+                    }
                     className="h-8 w-28 border-0 shadow-none"
                     aria-label="스테이지 이름"
                     placeholder="MAIN"
@@ -303,14 +627,29 @@ export default function ShowForm({ show, artists }: Props) {
                 </TableHeader>
                 <TableBody>
                   {form.slots.map((slot, index) => {
-                    const update = (patch: Partial<typeof slot>) => set('slots', form.slots.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+                    const update = (patch: Partial<typeof slot>) =>
+                      set(
+                        'slots',
+                        form.slots.map((s, i) => (i === index ? { ...s, ...patch } : s)),
+                      );
                     return (
                       <TableRow key={slot.id ?? `new-slot-${index}`}>
                         <TableCell>
-                          <DatePicker value={slot.date} min={form.startDate || undefined} max={form.endDate || undefined} onChange={(date) => update({ date })} className="w-44" />
+                          <DatePicker
+                            value={slot.date}
+                            min={form.startDate || undefined}
+                            max={form.endDate || undefined}
+                            onChange={(date) => update({ date })}
+                            className="w-44"
+                          />
                         </TableCell>
                         <TableCell>
-                          <select value={slot.stageKey} onChange={(e) => update({ stageKey: e.target.value })} className={selectClass} aria-label="스테이지">
+                          <select
+                            value={slot.stageKey}
+                            onChange={(e) => update({ stageKey: e.target.value })}
+                            className={selectClass}
+                            aria-label="스테이지"
+                          >
                             {form.stages.map((stage) => (
                               <option key={stage.key} value={stage.key}>
                                 {stage.name || '(이름 없음)'}
@@ -320,7 +659,10 @@ export default function ShowForm({ show, artists }: Props) {
                         </TableCell>
                         <TableCell>
                           <SearchSelect
-                            options={artistOptions.map((option) => ({ ...option, hint: form.artistIds.includes(option.value) ? undefined : '라인업 밖' }))}
+                            options={artistOptions.map((option) => ({
+                              ...option,
+                              hint: form.artistIds.includes(option.value) ? undefined : '라인업 밖',
+                            }))}
                             value={slot.artistId}
                             onChange={(artistId) => update({ artistId })}
                             placeholder="아티스트"
@@ -334,7 +676,18 @@ export default function ShowForm({ show, artists }: Props) {
                           <Input type="time" value={slot.end} onChange={(e) => update({ end: e.target.value })} aria-label="끝" />
                         </TableCell>
                         <TableCell>
-                          <Button type="button" size="icon-sm" variant="ghost" aria-label="무대 빼기" onClick={() => set('slots', form.slots.filter((_, i) => i !== index))}>
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            aria-label="무대 빼기"
+                            onClick={() =>
+                              set(
+                                'slots',
+                                form.slots.filter((_, i) => i !== index),
+                              )
+                            }
+                          >
                             <X />
                           </Button>
                         </TableCell>
@@ -355,13 +708,21 @@ export default function ShowForm({ show, artists }: Props) {
                 const last = form.slots.at(-1);
                 set('slots', [
                   ...form.slots,
-                  { stageKey: last?.stageKey ?? form.stages[0].key, artistId: '', date: last?.date ?? form.startDate, start: last?.end ?? '', end: '' },
+                  {
+                    stageKey: last?.stageKey ?? form.stages[0].key,
+                    artistId: '',
+                    date: last?.date ?? form.startDate,
+                    start: last?.end ?? '',
+                    end: '',
+                  },
                 ]);
               }}
             >
               <Plus /> 무대 추가
             </Button>
-            <p className="text-[11px] text-muted-foreground">끝 시각이 시작보다 이르면 다음 날 새벽으로 봐요. 무대를 추가하려면 스테이지가 하나 이상 있어야 해요.</p>
+            <p className="text-[11px] text-muted-foreground">
+              끝 시각이 시작보다 이르면 다음 날 새벽으로 봐요. 무대를 추가하려면 스테이지가 하나 이상 있어야 해요.
+            </p>
           </div>
         </Section>
       )}

@@ -69,7 +69,15 @@ export default function PickForm({ issue, nextVol, shows }: Props) {
       <Section title="Issue">
         <div className="grid grid-cols-4 gap-4">
           <Field label="호수" htmlFor="vol">
-            <Input id="vol" type="number" min={1} required disabled={!!issue} value={form.vol} onChange={(e) => setForm({ ...form, vol: Number(e.target.value) })} />
+            <Input
+              id="vol"
+              type="number"
+              min={1}
+              required
+              disabled={!!issue}
+              value={form.vol}
+              onChange={(e) => setForm({ ...form, vol: Number(e.target.value) })}
+            />
           </Field>
           <Field label="발행일" htmlFor="publishedAt">
             <DatePicker id="publishedAt" value={form.publishedAt} onChange={(publishedAt) => setForm({ ...form, publishedAt })} />
@@ -79,7 +87,11 @@ export default function PickForm({ issue, nextVol, shows }: Props) {
           </Field>
           <Field label="공개">
             <div className="flex h-9 items-center gap-2">
-              <Checkbox id="pickPublished" checked={form.isPublished} onCheckedChange={(checked) => setForm({ ...form, isPublished: checked === true })} />
+              <Checkbox
+                id="pickPublished"
+                checked={form.isPublished}
+                onCheckedChange={(checked) => setForm({ ...form, isPublished: checked === true })}
+              />
               <Label htmlFor="pickPublished" className="font-normal">
                 사이트에 보이기
               </Label>
@@ -94,11 +106,24 @@ export default function PickForm({ issue, nextVol, shows }: Props) {
             <li key={index} className="grid gap-2 rounded-md border p-3">
               <div className="flex items-center gap-2">
                 <span className="w-12 font-plex text-xs italic">{index === 0 ? 'MAIN' : String(index + 1).padStart(2, '0')}</span>
-                <SearchSelect options={showOptions} value={item.showId} onChange={(showId) => setItem(index, { showId })} placeholder="공연 선택" className="flex-1" />
+                <SearchSelect
+                  options={showOptions}
+                  value={item.showId}
+                  onChange={(showId) => setItem(index, { showId })}
+                  placeholder="공연 선택"
+                  className="flex-1"
+                />
                 <Button type="button" size="icon-sm" variant="ghost" aria-label="위로" disabled={index === 0} onClick={() => moveItem(index, -1)}>
                   <ArrowUp />
                 </Button>
-                <Button type="button" size="icon-sm" variant="ghost" aria-label="아래로" disabled={index === form.items.length - 1} onClick={() => moveItem(index, 1)}>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="아래로"
+                  disabled={index === form.items.length - 1}
+                  onClick={() => moveItem(index, 1)}
+                >
                   <ArrowDown />
                 </Button>
                 <Button
@@ -123,7 +148,13 @@ export default function PickForm({ issue, nextVol, shows }: Props) {
             </li>
           ))}
         </ol>
-        <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => setForm({ ...form, items: [...form.items, { showId: '', description: '' }] })}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit"
+          onClick={() => setForm({ ...form, items: [...form.items, { showId: '', description: '' }] })}
+        >
           <Plus /> 공연 추가
         </Button>
       </Section>

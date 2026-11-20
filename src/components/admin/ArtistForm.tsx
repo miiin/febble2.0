@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import ConfirmButton from '@/components/admin/ConfirmButton';
+import ImageUpload from '@/components/admin/ImageUpload';
+import SpotifyPicker from '@/components/admin/SpotifyPicker';
 import { Field, Section } from '@/components/admin/ui';
 import { Button } from '@/components/shadcn/button';
 import { Checkbox } from '@/components/shadcn/checkbox';
@@ -21,6 +23,7 @@ type Artist = {
   bio: string;
   isEditorPick: boolean;
   spotifyArtistId: string | null;
+  spotifyImageUrl: string | null;
 };
 
 type Props = {
@@ -33,6 +36,7 @@ export default function ArtistForm({ artist, knownGenres }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
+  const [image, setImage] = useState(artist?.image ?? '');
 
   // form action 대신 직접 제출한다 (action 은 끝나면 입력값을 비워서, 검사에 걸리면 적은 내용이 사라진다).
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -68,17 +72,26 @@ export default function ArtistForm({ artist, knownGenres }: Props) {
         <Field label="이름" htmlFor="name">
           <Input id="name" name="name" required defaultValue={artist?.name} />
         </Field>
-        <Field label="장르" htmlFor="genres" hint={`쉼표로 구분. 추천이 장르 글자가 같은지로 동작해요. 쓰고 있는 장르: ${knownGenres.join(', ') || '없음'}`}>
+        <Field
+          label="장르"
+          htmlFor="genres"
+          hint={`쉼표로 구분. 추천이 장르 글자가 같은지로 동작해요. 쓰고 있는 장르: ${knownGenres.join(', ') || '없음'}`}
+        >
           <Input id="genres" name="genres" defaultValue={artist?.genres.join(', ')} placeholder="인디 록, 포크" />
         </Field>
         <Field label="소개" htmlFor="bio">
           <Textarea id="bio" name="bio" rows={3} defaultValue={artist?.bio} />
         </Field>
-        <Field label="이미지 주소" htmlFor="image" hint="public/images 아래 경로(/images/...) 또는 https 주소">
-          <Input id="image" name="image" defaultValue={artist?.image ?? ''} />
+        <Field label="사진" hint="올린 사진이 없으면 연결한 Spotify 프로필 사진을 보여줘요.">
+          <ImageUpload folder="artists" shape="square" value={image} onChange={setImage} />
+          <input type="hidden" name="image" value={image} />
         </Field>
-        <Field label="Spotify 아티스트 ID" htmlFor="spotifyArtistId" hint="open.spotify.com/artist/ 뒤의 값. 있으면 미리듣기가 떠요.">
-          <Input id="spotifyArtistId" name="spotifyArtistId" defaultValue={artist?.spotifyArtistId ?? ''} />
+        <Field label="Spotify" hint="연결하면 사이트 아티스트 페이지에 미리듣기가 떠요. 사진·팔로워 수로 동명이인을 확인하세요.">
+          <SpotifyPicker
+            initialId={artist?.spotifyArtistId ?? null}
+            initialImageUrl={artist?.spotifyImageUrl ?? null}
+            getDefaultQuery={() => (document.getElementById('name') as HTMLInputElement | null)?.value ?? ''}
+          />
         </Field>
         <div className="flex items-center gap-2">
           <Checkbox id="isEditorPick" name="isEditorPick" defaultChecked={artist?.isEditorPick} />

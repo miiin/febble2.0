@@ -25,7 +25,12 @@ const columns: ColumnDef<ArtistRow>[] = [
       </Link>
     ),
   },
-  { accessorKey: 'genres', header: '장르', enableSorting: false, cell: ({ row }) => <span className="text-xs">{row.original.genres.join(', ')}</span> },
+  {
+    accessorKey: 'genres',
+    header: '장르',
+    enableSorting: false,
+    cell: ({ row }) => <span className="text-xs">{row.original.genres.join(', ')}</span>,
+  },
   { accessorKey: 'followers', header: '팔로워' },
   {
     id: 'pick',
@@ -35,7 +40,12 @@ const columns: ColumnDef<ArtistRow>[] = [
     enableSorting: false,
     cell: ({ row }) => row.original.isEditorPick && <StatusPill on onLabel="추천" />,
   },
-  { id: 'spotify', header: 'Spotify', enableSorting: false, cell: ({ row }) => <span className="text-xs">{row.original.spotifyArtistId ? '있음' : '—'}</span> },
+  {
+    id: 'spotify',
+    header: 'Spotify',
+    enableSorting: false,
+    cell: ({ row }) => <span className="text-xs">{row.original.spotifyArtistId ? '있음' : '—'}</span>,
+  },
 ];
 
 export default function ArtistsTable({ artists }: { artists: ArtistRow[] }) {

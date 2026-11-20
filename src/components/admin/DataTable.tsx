@@ -36,7 +36,16 @@ type Props<T> = {
 };
 
 // 어드민 목록: 검색 + 선택 필터 + 열 정렬 + 페이지 나누기 (TanStack Table).
-export default function DataTable<T>({ columns, data, searchText, searchPlaceholder = '검색', filters = [], initialSorting = [], pageSize = 20, empty = '없어요' }: Props<T>) {
+export default function DataTable<T>({
+  columns,
+  data,
+  searchText,
+  searchPlaceholder = '검색',
+  filters = [],
+  initialSorting = [],
+  pageSize = 20,
+  empty = '없어요',
+}: Props<T>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -50,7 +59,8 @@ export default function DataTable<T>({ columns, data, searchText, searchPlacehol
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: (row, _columnId, value: string) => searchText(row.original).toLowerCase().replace(/\s+/g, '').includes(value.toLowerCase().replace(/\s+/g, '')),
+    globalFilterFn: (row, _columnId, value: string) =>
+      searchText(row.original).toLowerCase().replace(/\s+/g, '').includes(value.toLowerCase().replace(/\s+/g, '')),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),

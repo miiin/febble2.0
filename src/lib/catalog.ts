@@ -32,6 +32,7 @@ async function loadCatalog() {
         bio: t.artists.bio,
         isEditorPick: t.artists.isEditorPick,
         spotifyArtistId: t.artists.spotifyArtistId,
+        spotifyImageUrl: t.artists.spotifyImageUrl,
         followerCount: count(t.artistFollows.userId),
       })
       .from(t.artists)
@@ -66,9 +67,10 @@ async function loadCatalog() {
     db.select().from(t.pickItems).orderBy(asc(t.pickItems.position)),
   ]);
 
-  const artists: Artist[] = artistRows.map((row) => ({
+  // 사진: 업로드한 사진이 있으면 그것, 없으면 Spotify 프로필 사진.
+  const artists: Artist[] = artistRows.map(({ spotifyImageUrl, ...row }) => ({
     ...row,
-    image: row.image ?? undefined,
+    image: row.image ?? spotifyImageUrl ?? undefined,
     isEditorPick: row.isEditorPick,
     spotifyArtistId: row.spotifyArtistId ?? undefined,
   }));

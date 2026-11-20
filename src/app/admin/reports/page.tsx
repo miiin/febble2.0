@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import ReportStatusSelect from '@/components/admin/ReportStatusSelect';
+import { Button } from '@/components/shadcn/button';
 import { PageHeader } from '@/components/admin/ui';
 import { requireAdmin } from '@/lib/admin/guard';
 import { listReports } from '@/lib/admin/queries';
@@ -32,7 +34,14 @@ export default async function AdminReportsPage() {
                 {dateTime.format(report.createdAt)} · {report.userId ? '로그인 사용자' : '비로그인'}
               </p>
             </div>
-            <ReportStatusSelect id={report.id} status={report.status} />
+            <div className="flex flex-col items-end gap-2">
+              <ReportStatusSelect id={report.id} status={report.status} />
+              {report.status === 'pending' && (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/admin/shows/new?report=${report.id}`}>공연으로 만들기</Link>
+                </Button>
+              )}
+            </div>
           </li>
         ))}
       </ul>
