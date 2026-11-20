@@ -84,6 +84,23 @@ body {
   --color-ring: var(--ring);
 }
 
+/* 어드민 페이지 배경(body 의 neutral-100 위에 .admin 의 bg-muted/40)과 같은 색을 불투명하게.
+   화면에 붙은 영역 뒤로 내용이 비치지 않게 한다. */
+.admin-page-bg {
+  background:
+    linear-gradient(color-mix(in oklab, var(--muted) 40%, transparent) 0 0),
+    var(--color-neutral-100);
+}
+
+/* 어드민 <select>: 브라우저 기본 화살표는 테두리에 붙어서, 기본 모양을 끄고 오른쪽 여백을 둔 화살표를 그린다. */
+.admin-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 0.625rem center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+}
+
 @layer base {
   .admin,
   .admin *,

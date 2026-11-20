@@ -1,11 +1,17 @@
 // AI 가 만드는 "공연 초안" 형식과 검사. 포스터 읽기와 제보 초안이 같이 쓴다. 서버에서만 쓴다.
 import 'server-only';
 import { z } from 'zod';
-import { DATE_RE, TIME_RE } from '@/lib/admin/validate';
+import { DATE_RE, SLUG_RE, TIME_RE } from '@/lib/admin/validate';
 
 // 자료에 없으면 null. 형식은 받은 뒤 한 번 더 검사한다 (cleanShowDraft).
 export const ShowDraftSchema = z.object({
   title: z.string().nullable().describe('공연·페스티벌 이름. 자료에 적힌 그대로'),
+  slug: z
+    .string()
+    .nullable()
+    .describe(
+      '공연 주소용 id 제안. 영문 소문자·숫자·하이픈만. 아티스트(또는 페스티벌) 영문 이름 + 도시 + 연도. 예: jaguar-twin-seoul-2026, busan-rock-2027',
+    ),
   category: z
     .enum(['indie', 'overseas', 'festival'])
     .nullable()
@@ -36,6 +42,7 @@ ${source}에서 공연 정보를 읽어 정해진 형식으로 돌려줘.
 - 시각은 24시간제로 바꾼다 (오후 8시 → 20:00). 개장 시각과 공연 시작 시각이 다르면 공연 시작 시각을 쓴다.
 - 공연 이름이 따로 없으면 아티스트 이름과 부제를 합쳐 쓴다 (예: "WEDNESDAY / LIVE IN SEOUL" → "Wednesday Live in Seoul").
 - 라인업은 아래 아티스트 목록과 이름이 같은 사람(한글/영문 표기 차이 포함)이면 그 id 를 쓰고, 없으면 artistId 를 null 로 둔다.
+- slug 는 아티스트·페스티벌의 영문 표기를 쓰고, 영문 표기를 모르면 한글을 로마자로 옮긴다 (예: 한로로 → hanroro). 40자 이내.
 - 예매처는 로고나 글자로 판단한다 (예: 인터파크 티켓, 멜론티켓, YES24 티켓). 주소는 자료에 적혀 있을 때만 쓴다.`;
 
 export const artistListText = (artists: { id: string; name: string }[]) =>
@@ -49,8 +56,17 @@ function vendorUrl(value: string | null) {
   return /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(url) ? `https://${url}` : null;
 }
 
+/** 형식에 맞지 않으면 null, 이미 있는 공연 id 와 겹치면 -2, -3 … 을 붙인다. */
+function availableSlug(value: string | null, showIds: Set<string>) {
+  const base = value?.trim().toLowerCase().slice(0, 60).replace(/-+$/, '');
+  if (!base || !SLUG_RE.test(base)) return null;
+  let slug = base;
+  for (let n = 2; showIds.has(slug); n++) slug = `${base}-${n}`;
+  return slug;
+}
+
 // 형식이 어긋난 값은 버린다. 없는 아티스트 id 도 연결하지 않는다.
-export function cleanShowDraft(draft: ShowDraft, artistIds: Set<string>): ShowDraft {
+export function cleanShowDraft(draft: ShowDraft, artistIds: Set<string>, showIds: Set<string>): ShowDraft {
   const date = (value: string | null) => (value && DATE_RE.test(value) ? value : null);
   const time = (value: string | null) => (value && TIME_RE.test(value) ? value : null);
   const timeZone = (value: string | null) => {
@@ -65,6 +81,7 @@ export function cleanShowDraft(draft: ShowDraft, artistIds: Set<string>): ShowDr
   const startDate = date(draft.startDate);
   return {
     ...draft,
+    slug: availableSlug(draft.slug, showIds),
     startDate,
     endDate: date(draft.endDate) ?? startDate,
     startTime: time(draft.startTime),

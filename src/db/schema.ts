@@ -72,7 +72,10 @@ export const artists = pgTable('artists', {
   id: text('id').primaryKey(), // slug, 예: 'silica-gel'
   name: text('name').notNull(),
   image: text('image'),
-  genres: text('genres').array().notNull().default(sql`'{}'::text[]`),
+  genres: text('genres')
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   bio: text('bio').notNull().default(''),
   /** 비로그인 For you 배너에서 일정 있는 아티스트가 모자라면 이 아티스트로 채운다. */
   isEditorPick: boolean('is_editor_pick').notNull().default(false),
@@ -208,7 +211,9 @@ export const pickItems = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.issueVol, t.showId] }),
-    uniqueIndex('pick_items_one_main_uq').on(t.issueVol).where(sql`${t.isMain}`),
+    uniqueIndex('pick_items_one_main_uq')
+      .on(t.issueVol)
+      .where(sql`${t.isMain}`),
   ],
 );
 
@@ -260,6 +265,8 @@ export const slotPicks = pgTable(
 // ─── 공연 제보 ────────────────────────────────────────────────────
 
 export const reportStatus = pgEnum('report_status', ['pending', 'added', 'rejected']);
+/** user: 사이트 제보하기, kopis: 공연예술통합전산망에서 가져온 공연 */
+export const reportSource = pgEnum('report_source', ['user', 'kopis']);
 
 export const reports = pgTable(
   'reports',
@@ -274,6 +281,10 @@ export const reports = pgTable(
     link: text('link'),
     message: text('message'),
     status: reportStatus('status').notNull().default('pending'),
+    source: reportSource('source').notNull().default('user'),
+    /** KOPIS 공연 ID (PF000000). 같은 공연을 두 번 가져오지 않는다. */
+    externalId: text('external_id').unique(),
+    poster: text('poster'),
     createdAt: createdAt(),
   },
   (t) => [index('reports_status_idx').on(t.status, t.createdAt)],

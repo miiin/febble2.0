@@ -4,7 +4,7 @@
 // 저장은 사람이 확인한 뒤 한다.
 import { readImage, todayInSeoul } from '@/lib/admin/ai';
 import { assertAdmin } from '@/lib/admin/guard';
-import { listArtistOptions } from '@/lib/admin/queries';
+import { listArtistOptions, listShowOptions } from '@/lib/admin/queries';
 import { artistListText, cleanShowDraft, type ShowDraft, ShowDraftSchema, showDraftSystem } from '@/lib/admin/showDraft';
 import { getObjectBytes, keyFromUrl } from '@/lib/storage';
 
@@ -16,7 +16,7 @@ export async function readPoster(url: string): Promise<DraftResult> {
   const key = keyFromUrl(url);
   if (!key) return { error: '먼저 포스터를 이 화면에서 올려주세요' };
 
-  const [image, artists] = await Promise.all([getObjectBytes(key), listArtistOptions()]);
+  const [image, artists, shows] = await Promise.all([getObjectBytes(key), listArtistOptions(), listShowOptions()]);
   const result = await readImage({
     label: '포스터',
     schema: ShowDraftSchema,
@@ -25,5 +25,7 @@ export async function readPoster(url: string): Promise<DraftResult> {
     mediaType: 'image/webp',
     text: `오늘 날짜: ${todayInSeoul()} (Asia/Seoul)\n\n${artistListText(artists)}\n\n이 포스터의 공연 정보를 읽어줘.`,
   });
-  return result.data ? { draft: cleanShowDraft(result.data, new Set(artists.map((a) => a.id))) } : { error: result.error };
+  return result.data
+    ? { draft: cleanShowDraft(result.data, new Set(artists.map((a) => a.id)), new Set(shows.map((s) => s.id))) }
+    : { error: result.error };
 }

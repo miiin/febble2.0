@@ -1,6 +1,6 @@
 // 어드민 화면 조회. 공개 화면과 달리 캐시하지 않고, 비공개 데이터까지 그대로 읽는다.
 import 'server-only';
-import { asc, count, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import * as t from '@/db/schema';
 
@@ -133,8 +133,27 @@ export async function getReport(id: number) {
   return row;
 }
 
+/** 사이트 제보 (모든 상태, 최신순) */
 export async function listReports() {
-  return db.select().from(t.reports).orderBy(desc(t.reports.createdAt));
+  return db.select().from(t.reports).where(eq(t.reports.source, 'user')).orderBy(desc(t.reports.createdAt));
+}
+
+/** KOPIS 에서 가져와 아직 처리하지 않은 공연 (날짜순) */
+export async function listKopisPending() {
+  return db
+    .select()
+    .from(t.reports)
+    .where(and(eq(t.reports.source, 'kopis'), eq(t.reports.status, 'pending')))
+    .orderBy(asc(t.reports.date));
+}
+
+/** KOPIS 공연과 febble 의 관련을 찾는 데 쓰는 아티스트 이름·공연장 */
+export async function getRelevanceHints() {
+  const [artistRows, venueRows] = await Promise.all([
+    db.select({ name: t.artists.name }).from(t.artists),
+    db.selectDistinct({ venue: t.shows.venue }).from(t.shows),
+  ]);
+  return { artists: artistRows.map((row) => row.name), venues: venueRows.map((row) => row.venue) };
 }
 
 export async function getDashboardCounts() {
@@ -144,7 +163,7 @@ export async function getDashboardCounts() {
       (SELECT count(*) FROM shows WHERE NOT is_published)::int AS unpublished,
       (SELECT count(*) FROM artists)::int AS artists,
       (SELECT count(*) FROM pick_issues)::int AS issues,
-      (SELECT count(*) FROM reports WHERE status = 'pending')::int AS pending,
+      (SELECT count(*) FROM reports WHERE status = 'pending' AND source = 'user')::int AS pending,
       (SELECT count(*) FROM users)::int AS users`)
   ).rows;
   return row;

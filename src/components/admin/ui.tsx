@@ -4,9 +4,9 @@ import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
 import { Label } from '@/components/shadcn/label';
 
-/** 기본 <select> 를 shadcn Input 과 같은 모양으로 (짧은 고정 목록용. 긴 목록은 SearchSelect) */
+/** 기본 <select> 를 shadcn Input 과 같은 모양으로 (짧은 고정 목록용. 긴 목록은 SearchSelect). 화살표는 globals.css 의 .admin-select */
 export const selectClass =
-  'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
+  'admin-select h-9 w-full rounded-md border border-input bg-transparent pr-9 pl-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
 export function PageHeader({ title, action, children }: { title: string; action?: { href: string; label: string }; children?: React.ReactNode }) {
   return (
