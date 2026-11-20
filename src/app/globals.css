@@ -14,8 +14,8 @@
 }
 
 @theme {
-  /* 모바일 전용 레이아웃 기준 폭. */
-  --container-mobile: 430px;
+  /* 모바일 전용 레이아웃 기준 폭. PC 에서도 이 폭으로 가운데에 보여주고 양옆은 DesktopAside 가 채운다. */
+  --container-mobile: 480px;
 
   --color-brand-yellow: #f3f724;
 
