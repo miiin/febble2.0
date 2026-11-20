@@ -6,6 +6,7 @@ import NewSection from '@/components/home/NewSection';
 import PickSection from '@/components/home/PickSection';
 import TicketOpenTicker from '@/components/home/TicketOpenTicker';
 import { getCatalog } from '@/lib/catalog';
+import { getCoFollows } from '@/lib/coFollows';
 import { getFeaturedArtists } from '@/lib/featuredArtists';
 import { getForYou } from '@/lib/forYou';
 import { getCurrentUser, getFollowedArtistIds } from '@/lib/user';
@@ -32,7 +33,7 @@ async function ForYou({ catalog, banner }: { catalog: Awaited<ReturnType<typeof 
   const user = await getCurrentUser();
   if (!user) return banner;
 
-  const followedIds = await getFollowedArtistIds(user.id);
-  const { news, recommendation } = getForYou(catalog, followedIds, MOCK_TODAY);
+  const [followedIds, coFollows] = await Promise.all([getFollowedArtistIds(user.id), getCoFollows()]);
+  const { news, recommendation } = getForYou(catalog, followedIds, MOCK_TODAY, coFollows);
   return <ForYouSection news={news} recommendation={recommendation} hasFollowing={followedIds.length > 0} />;
 }
