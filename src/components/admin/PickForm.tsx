@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, Sparkles, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { Textarea } from '@/components/shadcn/textarea';
 import { deletePick, type PickInput, savePick } from '@/lib/admin/pickActions';
+import { draftPickComment } from '@/lib/admin/pickAI';
 import { formatVol } from '@/mocks/picks';
 
 type Props = {
@@ -32,6 +33,7 @@ export default function PickForm({ issue, nextVol, shows }: Props) {
   );
   const [error, setError] = useState<string>();
   const [isPending, startTransition] = useTransition();
+  const [drafting, setDrafting] = useState<string>(); // 초안을 쓰는 중인 공연 id
   const showOptions = shows.map((show) => ({ value: show.id, label: show.title, hint: show.startDate }));
   const setItem = (index: number, patch: Partial<PickInput['items'][number]>) =>
     setForm((prev) => ({ ...prev, items: prev.items.map((item, i) => (i === index ? { ...item, ...patch } : item)) }));
@@ -42,6 +44,26 @@ export default function PickForm({ issue, nextVol, shows }: Props) {
       items.splice(index + delta, 0, item);
       return { ...prev, items };
     });
+
+  // 칸에 적어둔 글이 있으면 메모로 보고 그걸 바탕으로 다시 쓴다. 바꾼 뒤 되돌릴 수 있다.
+  const draft = async (index: number) => {
+    const item = form.items[index];
+    setDrafting(item.showId);
+    const result = await draftPickComment({ showId: item.showId, isMain: index === 0, memo: item.description }).catch(() => ({
+      error: '초안을 쓰지 못했어요. 잠시 뒤 다시 시도해주세요.',
+      comment: undefined,
+    }));
+    setDrafting(undefined);
+    if (!result.comment) return void toast.error(result.error);
+    const previous = item.description;
+    // 기다리는 사이 순서가 바뀌었을 수 있어 공연 id 로 찾아 넣는다.
+    const put = (description: string) =>
+      setForm((prev) => ({ ...prev, items: prev.items.map((it) => (it.showId === item.showId ? { ...it, description } : it)) }));
+    put(result.comment);
+    toast.success(previous.trim() ? '메모를 바탕으로 초안을 썼어요. 다듬어주세요.' : '초안을 썼어요. 다듬어주세요.', {
+      action: { label: '되돌리기', onClick: () => put(previous) },
+    });
+  };
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -142,9 +164,19 @@ export default function PickForm({ issue, nextVol, shows }: Props) {
                 rows={index === 0 ? 3 : 2}
                 value={item.description}
                 onChange={(e) => setItem(index, { description: e.target.value })}
-                placeholder="왜 이 공연인지 한두 줄"
+                placeholder="왜 이 공연인지 한두 줄. 키워드만 적고 ‘메모로 초안 쓰기’를 눌러도 돼요."
                 aria-label="코멘트"
               />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-fit"
+                disabled={!item.showId || drafting !== undefined}
+                onClick={() => draft(index)}
+              >
+                <Sparkles /> {drafting === item.showId ? '쓰는 중…' : item.description.trim() ? '메모로 초안 쓰기' : 'AI 초안'}
+              </Button>
             </li>
           ))}
         </ol>
