@@ -47,7 +47,8 @@ function validate(input: ShowInput) {
     throw new InputError(`시간대가 올바르지 않아요: ${input.timeZone} (예: Asia/Seoul)`);
   }
   check(new Set(input.artistIds).size === input.artistIds.length, '라인업에 같은 아티스트가 두 번 있어요');
-  for (const vendor of input.vendors) check(vendor.name.trim() && /^https?:\/\//.test(vendor.url.trim()), '예매처는 이름과 http(s) 주소를 모두 적어주세요');
+  for (const vendor of input.vendors)
+    check(vendor.name.trim() && /^https?:\/\//.test(vendor.url.trim()), '예매처는 이름과 http(s) 주소를 모두 적어주세요');
   for (const stage of input.stages) check(stage.name.trim(), '스테이지 이름을 적어주세요');
   const stageKeys = new Set(input.stages.map((stage) => stage.key));
   for (const slot of input.slots) {
@@ -95,10 +96,13 @@ export async function saveShow(existingId: string | null, input: ShowInput): Pro
 
       // 라인업·예매처는 다른 곳에서 참조하지 않아 통째로 바꾼다.
       await tx.delete(showArtists).where(eq(showArtists.showId, id));
-      if (input.artistIds.length) await tx.insert(showArtists).values(input.artistIds.map((artistId, position) => ({ showId: id, artistId, position })));
+      if (input.artistIds.length)
+        await tx.insert(showArtists).values(input.artistIds.map((artistId, position) => ({ showId: id, artistId, position })));
       await tx.delete(ticketVendors).where(eq(ticketVendors.showId, id));
       if (input.vendors.length)
-        await tx.insert(ticketVendors).values(input.vendors.map((vendor, position) => ({ showId: id, name: vendor.name.trim(), url: vendor.url.trim(), position })));
+        await tx
+          .insert(ticketVendors)
+          .values(input.vendors.map((vendor, position) => ({ showId: id, name: vendor.name.trim(), url: vendor.url.trim(), position })));
 
       // 타임테이블은 사용자가 담아둔 무대(slot_picks)가 있어서 id 를 유지한 채 바뀐 것만 고친다.
       // 화면에서 지운 스테이지·무대만 지운다 (담아둔 기록도 같이 지워진다).
@@ -121,9 +125,17 @@ export async function saveShow(existingId: string | null, input: ShowInput): Pro
       }
 
       const keepSlotIds = input.slots.flatMap((slot) => (slot.id ? [slot.id] : []));
-      await tx.delete(timetableSlots).where(and(eq(timetableSlots.showId, id), keepSlotIds.length ? notInArray(timetableSlots.id, keepSlotIds) : undefined));
+      await tx
+        .delete(timetableSlots)
+        .where(and(eq(timetableSlots.showId, id), keepSlotIds.length ? notInArray(timetableSlots.id, keepSlotIds) : undefined));
       for (const slot of input.slots) {
-        const slotValues = { stageId: stageIdByKey.get(slot.stageKey)!, artistId: slot.artistId, date: slot.date, startTime: slot.start, endTime: slot.end };
+        const slotValues = {
+          stageId: stageIdByKey.get(slot.stageKey)!,
+          artistId: slot.artistId,
+          date: slot.date,
+          startTime: slot.start,
+          endTime: slot.end,
+        };
         if (slot.id) {
           const [row] = await tx
             .update(timetableSlots)
@@ -154,4 +166,3 @@ export async function deleteShow(id: string): Promise<ActionResult> {
   updateTag('catalog');
   return { id };
 }
-

@@ -6,9 +6,9 @@ import { listGenres } from '@/lib/admin/queries';
 export default async function NewArtistPage() {
   await requireAdmin();
   return (
-    <>
+    <div className="mx-auto max-w-2xl">
       <PageHeader title="New artist" />
       <ArtistForm knownGenres={await listGenres()} />
-    </>
+    </div>
   );
 }

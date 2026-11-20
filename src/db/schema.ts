@@ -78,6 +78,8 @@ export const artists = pgTable('artists', {
   isEditorPick: boolean('is_editor_pick').notNull().default(false),
   /** 있으면 미리듣기 임베드를 띄운다. */
   spotifyArtistId: text('spotify_artist_id'),
+  /** Spotify 프로필 사진 주소 (복사하지 않고 원본 주소를 쓴다). image 가 없을 때 대신 보여준다. */
+  spotifyImageUrl: text('spotify_image_url'),
   createdAt: createdAt(),
 });
 // followerCount 는 컬럼으로 두지 않고 artist_follows 를 세서 구한다.

@@ -15,7 +15,8 @@ const toDate = (value: string) => {
   return new Date(y, m - 1, d);
 };
 const toValue = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-const label = (value: string) => new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }).format(toDate(value));
+const label = (value: string) =>
+  new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }).format(toDate(value));
 
 type Props = {
   id?: string;
@@ -78,14 +79,16 @@ type DateTimeProps = Omit<Props, 'value' | 'onChange'> & {
   onChange: (value: string) => void;
 };
 
-// 날짜(달력) + 시각. 둘 다 채워야 값이 생기고, 하나만 채운 동안에는 화면에만 남겨둔다.
+// 날짜(달력) + 시각. 둘 다 채워야 값이 생긴다. 하나만 채운 동안에는 화면에만 남겨두고,
+// 밖에서 값이 들어오면(포스터 읽기 등) 그 값을 그대로 보여준다.
 export function DateTimePicker({ value, onChange, clearable, ...props }: DateTimeProps) {
-  const [date, setDate] = useState(value.slice(0, 10));
-  const [time, setTime] = useState(value.slice(11, 16));
+  const [partial, setPartial] = useState({ date: '', time: '' });
+  const date = value ? value.slice(0, 10) : partial.date;
+  const time = value ? value.slice(11, 16) : partial.time;
   const update = (nextDate: string, nextTime: string) => {
-    setDate(nextDate);
-    setTime(nextTime);
-    onChange(nextDate && nextTime ? `${nextDate}T${nextTime}` : '');
+    const complete = nextDate && nextTime;
+    setPartial(complete ? { date: '', time: '' } : { date: nextDate, time: nextTime });
+    onChange(complete ? `${nextDate}T${nextTime}` : '');
   };
 
   return (

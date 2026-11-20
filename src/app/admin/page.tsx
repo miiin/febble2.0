@@ -25,7 +25,13 @@ export default async function AdminHomePage() {
       <ul className="mt-6 grid grid-cols-4 gap-3">
         {cards.map((card) => (
           <li key={card.href}>
-            <Link href={card.href} className={cn('block rounded-lg border bg-background p-4 transition-colors hover:border-foreground', card.highlight && 'border-foreground bg-brand-yellow')}>
+            <Link
+              href={card.href}
+              className={cn(
+                'block rounded-lg border bg-background p-4 transition-colors hover:border-foreground',
+                card.highlight && 'border-foreground bg-brand-yellow',
+              )}
+            >
               <span className="text-xs">{card.label}</span>
               <span className="mt-2 block font-display text-4xl">{card.value}</span>
               {card.sub && <span className="text-[11px] text-muted-foreground">{card.sub}</span>}

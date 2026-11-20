@@ -16,7 +16,7 @@ export default async function EditPickPage({ params }: PageProps<'/admin/picks/[
   const items = [...issue.items].sort((a, b) => Number(b.isMain) - Number(a.isMain)).map(({ showId, description }) => ({ showId, description }));
 
   return (
-    <>
+    <div className="mx-auto max-w-3xl">
       <PageHeader title={formatVol(issue.vol)} />
       {issue.isPublished && (
         <Link href={`/pick/${issue.vol}`} className="mt-2 inline-block text-xs underline underline-offset-2">
@@ -29,6 +29,6 @@ export default async function EditPickPage({ params }: PageProps<'/admin/picks/[
         nextVol={issue.vol}
         shows={shows}
       />
-    </>
+    </div>
   );
 }

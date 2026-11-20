@@ -12,12 +12,12 @@ export default async function EditArtistPage({ params }: PageProps<'/admin/artis
   if (!artist) notFound();
 
   return (
-    <>
+    <div className="mx-auto max-w-2xl">
       <PageHeader title={artist.name} />
       <Link href={`/artists/${artist.id}`} className="mt-2 inline-block text-xs underline underline-offset-2">
         사이트에서 보기
       </Link>
       <ArtistForm artist={artist} knownGenres={knownGenres} />
-    </>
+    </div>
   );
 }

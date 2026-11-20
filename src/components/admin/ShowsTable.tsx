@@ -29,8 +29,17 @@ const columns: ColumnDef<ShowRow>[] = [
       </Link>
     ),
   },
-  { accessorKey: 'category', header: '분류', filterFn: 'equalsString', cell: ({ row }) => <span className="text-xs">{CATEGORY_LABEL[row.original.category]}</span> },
-  { accessorKey: 'startDate', header: '일시', cell: ({ row }) => <span className="text-xs">{formatRange(row.original.startDate, row.original.endDate)}</span> },
+  {
+    accessorKey: 'category',
+    header: '분류',
+    filterFn: 'equalsString',
+    cell: ({ row }) => <span className="text-xs">{CATEGORY_LABEL[row.original.category]}</span>,
+  },
+  {
+    accessorKey: 'startDate',
+    header: '일시',
+    cell: ({ row }) => <span className="text-xs">{formatRange(row.original.startDate, row.original.endDate)}</span>,
+  },
   { accessorKey: 'venue', header: '장소', enableSorting: false, cell: ({ row }) => <span className="text-xs">{row.original.venue}</span> },
   {
     id: 'status',
@@ -41,7 +50,7 @@ const columns: ColumnDef<ShowRow>[] = [
     cell: ({ row }) => (
       <span className="space-x-1">
         <StatusPill on={row.original.isPublished} />
-        {row.original.soldOut && <StatusPill on onLabel="매진" />}
+        {row.original.soldOut && <StatusPill on onLabel="매진" tone="soldOut" />}
       </span>
     ),
   },

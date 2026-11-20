@@ -41,9 +41,15 @@ export async function savePick(existingVol: number | null, input: PickInput): Pr
       }
       // 항목은 다른 곳에서 참조하지 않아 통째로 바꾼다.
       await tx.delete(pickItems).where(eq(pickItems.issueVol, vol));
-      await tx
-        .insert(pickItems)
-        .values(input.items.map((item, position) => ({ issueVol: vol, showId: item.showId, description: item.description.trim(), isMain: position === 0, position })));
+      await tx.insert(pickItems).values(
+        input.items.map((item, position) => ({
+          issueVol: vol,
+          showId: item.showId,
+          description: item.description.trim(),
+          isMain: position === 0,
+          position,
+        })),
+      );
     });
   } catch (error) {
     return toResult(error);

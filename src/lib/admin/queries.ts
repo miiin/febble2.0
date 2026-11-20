@@ -128,6 +128,11 @@ export async function getPickIssueForEdit(vol: number) {
   return { ...issue, items: items.map(({ showId, description, isMain }) => ({ showId, description, isMain })) };
 }
 
+export async function getReport(id: number) {
+  const [row] = await db.select().from(t.reports).where(eq(t.reports.id, id));
+  return row;
+}
+
 export async function listReports() {
   return db.select().from(t.reports).orderBy(desc(t.reports.createdAt));
 }
