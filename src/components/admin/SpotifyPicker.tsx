@@ -15,6 +15,8 @@ type Props = {
   initialImageUrl: string | null;
   /** 검색창이 비었을 때 찾을 이름 (아티스트 이름 칸) */
   getDefaultQuery: () => string;
+  /** 검색 결과에서 아티스트를 골랐을 때 */
+  onChoose?: (artist: SpotifyArtist) => void;
 };
 
 const followers = (count: number) => (count >= 10_000 ? `${(count / 10_000).toFixed(count >= 100_000 ? 0 : 1)}만` : count.toLocaleString('ko-KR'));
@@ -42,7 +44,7 @@ function ArtistRow({ artist, action }: { artist: SpotifyArtist; action: React.Re
 
 // Spotify 아티스트 연결: 이름으로 찾거나 링크·ID 를 붙여 넣어 고른다. 사진·팔로워 수로 동명이인을 가린다.
 // 폼에는 hidden input(spotifyArtistId)으로 넘긴다.
-export default function SpotifyPicker({ initialId, initialImageUrl, getDefaultQuery }: Props) {
+export default function SpotifyPicker({ initialId, initialImageUrl, getDefaultQuery, onChoose }: Props) {
   const [selected, setSelected] = useState<SpotifyArtist>();
   const [selectedId, setSelectedId] = useState(initialId ?? '');
   const [query, setQuery] = useState('');
@@ -86,6 +88,7 @@ export default function SpotifyPicker({ initialId, initialImageUrl, getDefaultQu
     setSelectedId(artist.id);
     setResults(undefined);
     setQuery('');
+    onChoose?.(artist);
   };
 
   return (

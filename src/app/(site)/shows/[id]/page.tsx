@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import AddShowToCalendar from '@/components/calendar/AddShowToCalendar';
 import Lineup from '@/components/show/Lineup';
 import ShowActionBar from '@/components/show/ShowActionBar';
+import ShowNotice from '@/components/show/ShowNotice';
 import Timetable from '@/components/show/Timetable';
 import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
@@ -37,6 +38,8 @@ async function ShowDetail({ id }: { id: string }) {
     { label: '장소', value: show.venue },
     { label: '티켓 오픈', value: show.ticketOpenAt && `${formatShort(show.ticketOpenAt.slice(0, 10))} ${show.ticketOpenAt.slice(11)}` },
     { label: '가격', value: show.price },
+    { label: '공연 시간', value: show.details?.runtime },
+    { label: '관람 연령', value: show.details?.age },
   ].filter((row) => row.value);
 
   const timetable = show.timetable && (
@@ -99,6 +102,8 @@ async function ShowDetail({ id }: { id: string }) {
           </div>
         </section>
       )}
+
+      <ShowNotice show={show} />
 
       <ShowActionBar
         showId={show.id}

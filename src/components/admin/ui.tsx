@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
 import { Label } from '@/components/shadcn/label';
+import { cn } from '@/lib/utils';
 
 /** 기본 <select> 를 shadcn Input 과 같은 모양으로 (짧은 고정 목록용. 긴 목록은 SearchSelect). 화살표는 globals.css 의 .admin-select */
 export const selectClass =
@@ -71,5 +72,16 @@ export function StatusPill({
     <Badge variant={on ? 'default' : 'outline'} className={on ? PILL_TONE[tone] : undefined}>
       {on ? onLabel : offLabel}
     </Badge>
+  );
+}
+
+/** 목록 썸네일. 사진이 없으면 회색 칸. 크기·모양은 className 으로 정한다. */
+export function ListThumb({ src, className }: { src: string | null; className: string }) {
+  return src ? (
+    // 목록 썸네일은 작아서 원본 주소를 그대로 쓴다 (R2·Spotify·/images).
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="" loading="lazy" className={cn('shrink-0 border bg-muted object-cover', className)} />
+  ) : (
+    <span className={cn('shrink-0 border bg-muted', className)} />
   );
 }

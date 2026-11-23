@@ -5,6 +5,9 @@ export const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export const TIME_RE = /^\d{2}:\d{2}$/;
 
+/** 입력한 id 정리: 대문자는 소문자로, 띄어쓰기는 하이픈으로 ('Silica Gel' → 'silica-gel') */
+export const normalizeSlug = (value: string) => value.trim().toLowerCase().replace(/\s+/g, '-');
+
 export class InputError extends Error {}
 
 export function text(formData: FormData, key: string) {

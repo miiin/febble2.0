@@ -3,9 +3,11 @@
 import { and, eq, notInArray, sql } from 'drizzle-orm';
 import { updateTag } from 'next/cache';
 import { db } from '@/db';
-import { shows, showArtists, stages, ticketVendors, timetableSlots } from '@/db/schema';
+import { type ShowDetails, shows, showArtists, stages, ticketVendors, timetableSlots } from '@/db/schema';
 import { assertAdmin } from '@/lib/admin/guard';
-import { type ActionResult, check, DATE_RE, InputError, isReferenced, pgCode, SLUG_RE, TIME_RE, toResult } from '@/lib/admin/validate';
+import { copyRemoteImage } from '@/lib/admin/remoteImage';
+import { type ActionResult, check, DATE_RE, InputError, isReferenced, normalizeSlug, pgCode, SLUG_RE, TIME_RE, toResult } from '@/lib/admin/validate';
+import { keyFromUrl } from '@/lib/storage';
 
 export type ShowInput = {
   id: string;
@@ -28,7 +30,21 @@ export type ShowInput = {
   /** id 가 있으면 기존 스테이지. key 는 화면에서 무대가 스테이지를 가리키는 값 */
   stages: { id?: number; key: string; name: string }[];
   slots: { id?: number; stageKey: string; artistId: string; date: string; start: string; end: string }[];
+  /** KOPIS 공연 ID 또는 '' */
+  kopisId: string;
+  details: ShowDetails;
 };
+
+// 빈 문구는 빼고, 모두 비면 null 로 저장한다.
+function cleanDetails(details: ShowDetails): ShowDetails | null {
+  const { images = [], ...texts } = details;
+  const cleaned: ShowDetails = Object.fromEntries(
+    Object.entries(texts).flatMap(([key, value]) => (typeof value === 'string' && value.trim() ? [[key, value.trim()]] : [])),
+  );
+  const urls = images.filter((url) => /^https:\/\//.test(url));
+  if (urls.length) cleaned.images = urls;
+  return Object.keys(cleaned).length ? cleaned : null;
+}
 
 const empty = (value: string) => (value.trim() === '' ? null : value.trim());
 
@@ -60,11 +76,13 @@ function validate(input: ShowInput) {
 }
 
 /** existingId 가 없으면 새로 만든다. id 는 주소와 다른 테이블이 쓰므로 만든 뒤에는 바꾸지 않는다. */
-export async function saveShow(existingId: string | null, input: ShowInput): Promise<ActionResult> {
+export async function saveShow(existingId: string | null, input: ShowInput): Promise<ActionResult & { image?: string }> {
   await assertAdmin();
-  const id = existingId ?? input.id;
+  const id = existingId ?? normalizeSlug(input.id);
+  let image: string | null;
   try {
     validate({ ...input, id });
+    image = await ownImage(input.image);
     const values = {
       category: input.category,
       title: input.title.trim(),
@@ -73,13 +91,15 @@ export async function saveShow(existingId: string | null, input: ShowInput): Pro
       startTime: empty(input.startTime),
       timeZone: input.timeZone,
       venue: input.venue.trim(),
-      image: empty(input.image),
+      image,
       description: empty(input.description),
       price: empty(input.price),
       // 입력은 공연 현지 시각이다.
       ticketOpenAt: input.ticketOpenAt ? sql`(${input.ticketOpenAt.replace('T', ' ')}::timestamp AT TIME ZONE ${input.timeZone})` : null,
       soldOut: input.soldOut,
       isPublished: input.isPublished,
+      kopisId: empty(input.kopisId),
+      details: cleanDetails(input.details),
     };
 
     await db.transaction(async (tx) => {
@@ -152,7 +172,17 @@ export async function saveShow(existingId: string | null, input: ShowInput): Pro
     return toResult(error);
   }
   updateTag('catalog');
-  return { id };
+  return { id, image: image ?? '' };
+}
+
+/** 외부 이미지 주소는 R2 로 복사한 주소로 바꾼다 (R2·/images/ 주소는 그대로). */
+async function ownImage(value: string) {
+  const url = empty(value);
+  if (!url || url.startsWith('/') || keyFromUrl(url)) return url;
+  check(/^https?:\/\//.test(url), '이미지 주소가 올바르지 않아요');
+  const copied = await copyRemoteImage(url);
+  check(copied, '이미지 주소에서 이미지를 가져오지 못했어요. 파일로 올려주세요.');
+  return copied!;
 }
 
 export async function deleteShow(id: string): Promise<ActionResult> {

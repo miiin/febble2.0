@@ -1,5 +1,6 @@
 // 공연·페스티벌 mock. 단독 공연과 페스티벌을 같은 Show 로 다루고, 페스티벌만 timetable 을 가진다.
 // 백엔드는 이 구조에 맞춰 설계한다.
+import type { ShowDetails } from '@/db/schema';
 
 /** 로그인·서버 연동 전 기준 날짜. 실제 연동 시 서버의 오늘 날짜로 바꾼다. */
 export const MOCK_TODAY = '2026-11-18';
@@ -46,6 +47,8 @@ export type Show = {
   ticketOpenAt?: string; // 'YYYY-MM-DD HH:mm'
   /** DB 등록일 'YYYY-MM-DD'. 홈 For you 의 '새공연' 배지에 쓴다 (mock 에는 없음). */
   createdAt?: string;
+  /** 어드민이 직접 넣은 공연 안내 (공연 시간·관람 연령·이미지 등) */
+  details?: ShowDetails;
   /** 페스티벌 시간표. 없으면 라인업만 보여준다. */
   timetable?: { stages: Stage[]; slots: TimetableSlot[] };
 };

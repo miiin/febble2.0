@@ -3,11 +3,14 @@
 import Link from 'next/link';
 import type { ColumnDef } from '@tanstack/react-table';
 import DataTable from '@/components/admin/DataTable';
-import { StatusPill } from '@/components/admin/ui';
+import { ListThumb, StatusPill } from '@/components/admin/ui';
 
 export type ArtistRow = {
   id: string;
   name: string;
+  /** 올린 사진. 없으면 Spotify 프로필 사진 */
+  image: string | null;
+  spotifyImageUrl: string | null;
   genres: string[];
   isEditorPick: boolean;
   spotifyArtistId: string | null;
@@ -19,9 +22,12 @@ const columns: ColumnDef<ArtistRow>[] = [
     accessorKey: 'name',
     header: '이름',
     cell: ({ row }) => (
-      <Link href={`/admin/artists/${row.original.id}`} className="font-medium underline-offset-2 hover:underline">
-        {row.original.name}
-        <span className="block text-[11px] font-normal text-muted-foreground">{row.original.id}</span>
+      <Link href={`/admin/artists/${row.original.id}`} className="group flex items-center gap-3">
+        <ListThumb src={row.original.image ?? row.original.spotifyImageUrl} className="size-9 rounded-full" />
+        <span className="font-medium underline-offset-2 group-hover:underline">
+          {row.original.name}
+          <span className="block text-[11px] font-normal text-muted-foreground">{row.original.id}</span>
+        </span>
       </Link>
     ),
   },

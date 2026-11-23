@@ -9,6 +9,8 @@ export async function listArtists() {
     .select({
       id: t.artists.id,
       name: t.artists.name,
+      image: t.artists.image,
+      spotifyImageUrl: t.artists.spotifyImageUrl,
       genres: t.artists.genres,
       isEditorPick: t.artists.isEditorPick,
       spotifyArtistId: t.artists.spotifyArtistId,
@@ -35,6 +37,7 @@ export async function listShows() {
     .select({
       id: t.shows.id,
       title: t.shows.title,
+      image: t.shows.image,
       category: t.shows.category,
       startDate: t.shows.startDate,
       endDate: t.shows.endDate,
@@ -63,6 +66,8 @@ export async function getShowForEdit(id: string) {
       price: t.shows.price,
       soldOut: t.shows.soldOut,
       isPublished: t.shows.isPublished,
+      kopisId: t.shows.kopisId,
+      details: t.shows.details,
       // 입력칸(datetime-local)은 공연 현지 시각을 쓴다.
       ticketOpenAt: sql<string | null>`to_char(${t.shows.ticketOpenAt} AT TIME ZONE ${t.shows.timeZone}, 'YYYY-MM-DD"T"HH24:MI')`,
     })
@@ -138,13 +143,22 @@ export async function listReports() {
   return db.select().from(t.reports).where(eq(t.reports.source, 'user')).orderBy(desc(t.reports.createdAt));
 }
 
-/** KOPIS 에서 가져와 아직 처리하지 않은 공연 (날짜순) */
-export async function listKopisPending() {
+/** KOPIS 에서 가져온 공연 중 status 인 것 (날짜순) */
+export async function listKopisReports(status: (typeof t.reportStatus.enumValues)[number]) {
   return db
     .select()
     .from(t.reports)
-    .where(and(eq(t.reports.source, 'kopis'), eq(t.reports.status, 'pending')))
+    .where(and(eq(t.reports.source, 'kopis'), eq(t.reports.status, status)))
     .orderBy(asc(t.reports.date));
+}
+
+export async function countKopisReports() {
+  const rows = await db
+    .select({ status: t.reports.status, n: count() })
+    .from(t.reports)
+    .where(eq(t.reports.source, 'kopis'))
+    .groupBy(t.reports.status);
+  return Object.fromEntries(rows.map((row) => [row.status, row.n])) as Partial<Record<(typeof t.reportStatus.enumValues)[number], number>>;
 }
 
 /** KOPIS 공연과 febble 의 관련을 찾는 데 쓰는 아티스트 이름·공연장 */

@@ -7,6 +7,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -91,6 +92,18 @@ export const artists = pgTable('artists', {
 
 export const showCategory = pgEnum('show_category', ['indie', 'overseas', 'festival']);
 
+/** 공연 안내. 필요한 공연에만 어드민이 직접 넣고, 넣은 항목만 공연 상세에 보여준다. 문구는 화면에 그대로. */
+export type ShowDetails = {
+  runtime?: string; // '120분'
+  age?: string; // '만 7세 이상'
+  cast?: string;
+  schedule?: string; // '토요일(18:00), 일요일(17:00)'
+  organizer?: string; // '주최: ○○ / 기획: ○○'
+  story?: string;
+  /** 라인업 발표·공지 이미지. 어드민에서 R2 에 올린 주소 */
+  images?: string[];
+};
+
 export const shows = pgTable(
   'shows',
   {
@@ -113,6 +126,9 @@ export const shows = pgTable(
     ticketOpenAt: timestamp('ticket_open_at', { withTimezone: true }),
     /** 공개 여부. CMS 에서 작성 중인 공연은 false 로 숨긴다. */
     isPublished: boolean('is_published').notNull().default(false),
+    /** KOPIS 에서 가져온 공연이면 KOPIS 공연 ID (PF…). 어드민에서 KOPIS 페이지 링크를 보여준다. */
+    kopisId: text('kopis_id'),
+    details: jsonb('details').$type<ShowDetails>(),
     /** 홈 New 섹션은 이 값 최신순. */
     createdAt: createdAt(),
   },
@@ -285,6 +301,8 @@ export const reports = pgTable(
     /** KOPIS 공연 ID (PF000000). 같은 공연을 두 번 가져오지 않는다. */
     externalId: text('external_id').unique(),
     poster: text('poster'),
+    /** KOPIS 출연진 문구 그대로. null 이면 아직 상세를 받지 않았고, '' 이면 KOPIS 에 출연진이 없다. */
+    cast: text('cast'),
     createdAt: createdAt(),
   },
   (t) => [index('reports_status_idx').on(t.status, t.createdAt)],

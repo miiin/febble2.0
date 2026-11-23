@@ -13,7 +13,7 @@ export default async function AdminHomePage() {
     { href: '/admin/shows', label: '공연', value: counts.shows, sub: counts.unpublished ? `비공개 ${counts.unpublished}` : undefined },
     { href: '/admin/artists', label: '아티스트', value: counts.artists },
     { href: '/admin/picks', label: 'Pick 호', value: counts.issues },
-    { href: '/admin/reports', label: '처리할 제보', value: counts.pending, highlight: counts.pending > 0 },
+    { href: '/admin/reports?tab=user', label: '처리할 제보', value: counts.pending, highlight: counts.pending > 0 },
   ];
 
   return (

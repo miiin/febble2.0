@@ -52,6 +52,7 @@ async function loadCatalog() {
         description: t.shows.description,
         price: t.shows.price,
         soldOut: t.shows.soldOut,
+        details: t.shows.details,
         createdAt: t.shows.createdAt,
         // 화면은 공연 현지 시각 'YYYY-MM-DD HH:mm' 을 쓴다.
         ticketOpenAt: sql<string | null>`to_char(${t.shows.ticketOpenAt} AT TIME ZONE ${t.shows.timeZone}, 'YYYY-MM-DD HH24:MI')`,
@@ -95,6 +96,7 @@ async function loadCatalog() {
       ticketVendors: vendorRows.filter((vendor) => vendor.showId === row.id).map(({ name, url }) => ({ name, url })),
       soldOut: row.soldOut,
       ticketOpenAt: row.ticketOpenAt ?? undefined,
+      details: row.details ?? undefined,
       createdAt: row.createdAt.toISOString().slice(0, 10),
       timetable:
         stages.length > 0

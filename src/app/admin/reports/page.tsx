@@ -1,19 +1,28 @@
 import Link from 'next/link';
+import KopisCastButton from '@/components/admin/KopisCastButton';
 import KopisImportButton from '@/components/admin/KopisImportButton';
+import KopisList from '@/components/admin/KopisList';
 import ReportStatusSelect from '@/components/admin/ReportStatusSelect';
-import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
 import { PageHeader } from '@/components/admin/ui';
 import { requireAdmin } from '@/lib/admin/guard';
-import { getRelevanceHints, listKopisPending, listReports } from '@/lib/admin/queries';
+import { countKopisReports, getRelevanceHints, listKopisReports, listReports } from '@/lib/admin/queries';
 import { cn } from '@/lib/utils';
 
 const dateTime = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 const KOPIS_LIMIT = 200;
+const KOPIS_STATUS = [
+  ['pending', '처리 전'],
+  ['added', '추가함'],
+  ['rejected', '반려'],
+] as const;
+type KopisStatus = (typeof KOPIS_STATUS)[number][0];
 
 export default async function AdminReportsPage({ searchParams }: PageProps<'/admin/reports'>) {
   await requireAdmin();
-  const tab = (await searchParams).tab === 'kopis' ? 'kopis' : 'user';
+  const params = await searchParams;
+  const tab = params.tab === 'user' ? 'user' : 'kopis';
+  const status = KOPIS_STATUS.find(([key]) => key === params.status)?.[0] ?? 'pending';
 
   return (
     <>
@@ -21,8 +30,8 @@ export default async function AdminReportsPage({ searchParams }: PageProps<'/adm
       <nav className="mt-4 flex gap-1 text-sm">
         {(
           [
-            ['user', '사용자 제보', '/admin/reports'],
-            ['kopis', 'KOPIS', '/admin/reports?tab=kopis'],
+            ['kopis', 'KOPIS', '/admin/reports'],
+            ['user', '사용자 제보', '/admin/reports?tab=user'],
           ] as const
         ).map(([key, label, href]) => (
           <Link
@@ -34,7 +43,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps<'/adm
           </Link>
         ))}
       </nav>
-      {tab === 'user' ? <UserReports /> : <KopisReports />}
+      {tab === 'user' ? <UserReports /> : <KopisReports status={status} />}
     </>
   );
 }
@@ -81,17 +90,17 @@ async function UserReports() {
 // 공백·대소문자를 무시하고 비교한다.
 const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, '');
 
-async function KopisReports() {
-  const [pending, hints] = await Promise.all([listKopisPending(), getRelevanceHints()]);
+async function KopisReports({ status }: { status: KopisStatus }) {
+  const [reports, counts, hints] = await Promise.all([listKopisReports(status), countKopisReports(), getRelevanceHints()]);
   const artists = hints.artists.filter((name) => normalize(name).length >= 2);
   // febble 공연장은 "공연장, 도시" 로 적으므로 앞부분만 본다.
   const venues = [...new Set(hints.venues.map((venue) => venue.split(',')[0].trim()).filter((venue) => normalize(venue).length >= 2))];
 
-  // 등록된 아티스트 이름이 공연 이름에 있거나, febble 에 올린 적 있는 공연장이면 '관련'.
-  const rows = pending
+  // 등록된 아티스트 이름이 공연 이름·출연진에 있거나, febble 에 올린 적 있는 공연장이면 '관련'.
+  const rows = reports
     .map((report) => ({
       report,
-      artistMatches: artists.filter((name) => normalize(report.title).includes(normalize(name))),
+      artistMatches: artists.filter((name) => normalize(`${report.title} ${report.cast ?? ''}`).includes(normalize(name))),
       venueMatches: venues.filter((venue) => normalize(report.venue ?? '').includes(normalize(venue))),
     }))
     // 아티스트가 겹치는 공연 → 공연장만 겹치는 공연 → 나머지. 같은 순위 안에서는 날짜순 (안정 정렬).
@@ -103,50 +112,51 @@ async function KopisReports() {
     <>
       <div className="mt-3 flex items-end justify-between gap-4">
         <p className="text-xs text-muted-foreground">
-          KOPIS(공연예술통합전산망)에 등록된 앞으로 60일의 대중음악 공연이에요. 처리하지 않은 공연 {pending.length}건 중 관련 {related}건.
+          KOPIS(공연예술통합전산망)에 등록된 앞으로 60일의 대중음악 공연이에요. {KOPIS_STATUS.find(([key]) => key === status)![1]} {reports.length}건
+          중 관련 {related}건.
           <br />
-          등록된 아티스트가 나오는 공연, febble 에 올린 적 있는 공연장의 공연 순으로 위에 보여줘요. 올리지 않을 공연은 ‘반려’로 넘겨주세요.
+          등록된 아티스트가 나오는 공연, febble 에 올린 적 있는 공연장의 공연 순으로 위에 보여줘요. 여러 개를 골라 공연으로 추가(출연진으로 라인업·새
+          아티스트까지)하거나 반려할 수 있어요.
         </p>
-        <KopisImportButton />
+        <div className="flex shrink-0 gap-2">
+          {status === 'pending' && <KopisCastButton missing={reports.filter((report) => report.cast === null).length} />}
+          <KopisImportButton />
+        </div>
       </div>
-      {pending.length === 0 && <p className="mt-10 text-center text-sm">처리할 공연이 없어요. KOPIS에서 가져와 주세요.</p>}
-      <ul className="mt-4 divide-y rounded-md border bg-background">
-        {rows.slice(0, KOPIS_LIMIT).map(({ report, artistMatches, venueMatches }) => (
-          <li key={report.id} className="grid grid-cols-[3rem_1fr_auto] items-start gap-4 px-4 py-3">
-            {report.poster ? (
-              // KOPIS 포스터는 외부 주소라 next/image 대신 그대로 보여준다.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={report.poster} alt="" loading="lazy" className="h-16 w-12 rounded-sm bg-muted object-cover" />
-            ) : (
-              <div className="h-16 w-12 rounded-sm bg-muted" />
+      <nav className="mt-4 flex gap-1 text-xs">
+        {KOPIS_STATUS.map(([key, label]) => (
+          <Link
+            key={key}
+            href={key === 'pending' ? '/admin/reports' : `/admin/reports?status=${key}`}
+            className={cn(
+              'rounded-full border px-3 py-1',
+              status === key ? 'border-foreground bg-foreground text-background' : 'text-muted-foreground hover:bg-accent',
             )}
-            <div className="min-w-0 text-sm">
-              <p className="font-medium">{report.title}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{[report.date, report.venue].filter(Boolean).join(' · ')}</p>
-              {artistMatches.length + venueMatches.length > 0 && (
-                <div className="mt-1.5 flex flex-wrap gap-1">
-                  {artistMatches.map((name) => (
-                    <Badge key={name} className="bg-brand-yellow text-black">
-                      아티스트 · {name}
-                    </Badge>
-                  ))}
-                  {venueMatches.map((venue) => (
-                    <Badge key={venue} variant="outline">
-                      공연장 · {venue}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <ReportStatusSelect id={report.id} status={report.status} />
-              <Button asChild size="sm" variant="outline">
-                <Link href={`/admin/shows/new?report=${report.id}`}>공연으로 만들기</Link>
-              </Button>
-            </div>
-          </li>
+          >
+            {label} {counts[key] ?? 0}
+          </Link>
         ))}
-      </ul>
+      </nav>
+      {reports.length === 0 &&
+        (status === 'pending' ? (
+          <p className="mt-10 text-center text-sm">처리할 공연이 없어요. KOPIS에서 가져와 주세요.</p>
+        ) : (
+          <p className="mt-10 text-center text-sm">아직 없어요.</p>
+        ))}
+      <KopisList
+        rows={rows.slice(0, KOPIS_LIMIT).map(({ report, artistMatches, venueMatches }) => ({
+          id: report.id,
+          externalId: report.externalId,
+          title: report.title,
+          date: report.date,
+          venue: report.venue,
+          cast: report.cast,
+          poster: report.poster,
+          status: report.status,
+          artistMatches,
+          venueMatches,
+        }))}
+      />
       {rows.length > KOPIS_LIMIT && (
         <p className="mt-3 text-center text-xs text-muted-foreground">
           {rows.length}건 중 {KOPIS_LIMIT}건만 보여줘요. 위에서부터 처리하면 다음 공연이 올라와요.
