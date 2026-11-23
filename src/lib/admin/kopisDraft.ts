@@ -26,13 +26,30 @@ const SHORT_AREA: Record<string, string> = {
   제주특별자치도: '제주',
 };
 
-/** "무신사 개러지 (구. 왓챠홀)" + "서울특별시" → "무신사 개러지, 서울" */
+// 상세 API 는 "시설 (공연장)" 으로 주는데, 공연장이 하나뿐인 시설은 같은 이름이 괄호에 한 번 더 온다.
+// 맨 뒤 괄호(안에 괄호가 또 있을 수 있다)가 바깥 이름과 같으면 지운다. 다른 이름이면 둔다: "올림픽공원 (올림픽홀)"
+function dropRepeatedName(venue: string) {
+  if (!venue.endsWith(')')) return venue;
+  let depth = 0;
+  for (let i = venue.length - 1; i >= 0; i--) {
+    if (venue[i] === ')') depth++;
+    else if (venue[i] === '(' && --depth === 0) {
+      const outer = venue.slice(0, i).trim();
+      const inner = venue.slice(i + 1, -1).trim();
+      return outer.replace(/\s+/g, '') === inner.replace(/\s+/g, '') ? outer : venue;
+    }
+  }
+  return venue;
+}
+
+/** "롤링홀 (롤링홀)" + "서울특별시" → "롤링홀, 서울" */
 export function kopisVenue(venue: string, area: string) {
-  const name = venue
-    .replace(/\s*\(구[.,]?\s*[^)]*\)/g, '') // 옛 이름: (구. 왓챠홀), (구, 신한카드 …)
-    .replace(/\s*\[[^\]]*\]/g, '') // 지점 표기: [마포]
-    .replace(/^\((재|사)\)\s*/, '') // 법인 표기: (재) 영화의전당
-    .trim();
+  const name = dropRepeatedName(
+    venue
+      .replace(/\s*\[[^\]]*\]/g, '') // 지점 표기: [마포]
+      .replace(/^\((재|사)\)\s*/, '') // 법인 표기: (재) 영화의전당
+      .trim(),
+  );
   const city = SHORT_AREA[area] ?? area;
   return city ? `${name}, ${city}` : name;
 }
@@ -62,4 +79,18 @@ export function kopisBaseDraft(kopis: KopisDetail): Omit<ShowDraft, 'slug' | 'li
     ticketVendors: kopis.vendors.map((vendor) => ({ name: vendor.name, url: vendor.url || null })),
     notes,
   };
+}
+
+/** KOPIS 출연진 문구를 이름 목록으로. "실리카겔, 새소년 등" → ['실리카겔', '새소년'], "검정치마 외 3명" → ['검정치마'] */
+export function castNames(cast: string | null | undefined) {
+  const names = (cast ?? '')
+    .split(/[,，/|·\n]+/)
+    .map((name) =>
+      name
+        .replace(/\s+외(\s*\d+\s*(명|팀))?\s*$/, '') // 외 3명 (이름 끝 글자 '외'는 두고, 띄어 쓴 '외'만)
+        .replace(/\s+등\s*$/, '') // 등
+        .trim(),
+    )
+    .filter((name) => name && name !== '등' && name !== '외');
+  return [...new Set(names)];
 }

@@ -1,25 +1,32 @@
 'use server';
 
 // KOPIS 목록에서 고른 공연을 한꺼번에 처리한다. AI 는 쓰지 않는다.
-// 추가: KOPIS 정보를 규칙으로 옮겨 '비공개' 공연으로 만들고, 어드민이 열어 확인한 뒤 공개한다.
+// 추가: 확인 창(previewKopisAdd)에서 출연진 중 새로 만들 아티스트와 공개 여부를 고른 뒤,
+// 아티스트를 만들고 KOPIS 정보를 규칙으로 옮겨 공연을 만든다 (라인업까지 연결).
 import { and, eq, inArray } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
-import sharp from 'sharp';
+import { revalidatePath, updateTag } from 'next/cache';
 import { db } from '@/db';
-import { reports } from '@/db/schema';
+import { artists as artistsTable, reports } from '@/db/schema';
 import { assertAdmin } from '@/lib/admin/guard';
+import { fillCast, matchCast } from '@/lib/admin/kopisCast';
 import { kopisBaseDraft, kopisVenue } from '@/lib/admin/kopisDraft';
 import { listArtistOptions } from '@/lib/admin/queries';
+import { copyRemoteImage } from '@/lib/admin/remoteImage';
 import { saveShow } from '@/lib/admin/showActions';
 import { getKopisShow } from '@/lib/kopis';
-import { putObject } from '@/lib/storage';
+import { artistSlug, uniqueSlug } from '@/lib/slug';
+import { searchArtists } from '@/lib/spotify';
 
 /** 한 번에 추가할 수 있는 공연 수 (KOPIS 요청이 몰리면 막힌다) */
 const MAX_ADD = 20;
 
-export type BulkAddResult = { added: number; failed: { title: string; error: string }[]; error?: string };
-
 const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, '');
+
+const selectPending = (ids: number[]) =>
+  db
+    .select()
+    .from(reports)
+    .where(and(inArray(reports.id, ids), eq(reports.source, 'kopis'), eq(reports.status, 'pending')));
 
 export async function rejectKopisReports(ids: number[]): Promise<{ count: number }> {
   await assertAdmin();
@@ -33,31 +40,84 @@ export async function rejectKopisReports(ids: number[]): Promise<{ count: number
   return { count: rows.length };
 }
 
-export async function addKopisShows(ids: number[]): Promise<BulkAddResult> {
+export type KopisAddPreview = {
+  reportId: number;
+  title: string;
+  /** 라인업에 연결될 등록된 아티스트 */
+  matched: { id: string; name: string }[];
+  /** 출연진 중 등록되지 않은 이름 */
+  unknown: string[];
+  /** KOPIS 에 출연진이 없음 */
+  noCast: boolean;
+};
+
+/** 확인 창 내용. 출연진을 아직 받지 않은 공연은 여기서 받는다. */
+export async function previewKopisAdd(ids: number[]): Promise<{ items?: KopisAddPreview[]; error?: string }> {
   await assertAdmin();
-  if (ids.length > MAX_ADD) return { added: 0, failed: [], error: `한 번에 ${MAX_ADD}개까지 추가할 수 있어요` };
-  const [rows, artists] = await Promise.all([
-    db
-      .select()
-      .from(reports)
-      .where(and(inArray(reports.id, ids), eq(reports.source, 'kopis'), eq(reports.status, 'pending'))),
-    listArtistOptions(),
-  ]);
+  if (ids.length > MAX_ADD) return { error: `한 번에 ${MAX_ADD}개까지 추가할 수 있어요` };
+  const missing = (await selectPending(ids)).filter((row) => row.cast === null).map((row) => row.id);
+  await fillCast(missing);
+  const [rows, artists] = await Promise.all([selectPending(ids), listArtistOptions()]);
+  const nameOf = new Map(artists.map((artist) => [artist.id, artist.name]));
+  return {
+    items: rows.map((row) => {
+      const match = matchCast(row.cast, row.title, artists);
+      return {
+        reportId: row.id,
+        title: row.title,
+        matched: match.artistIds.map((id) => ({ id, name: nameOf.get(id) ?? id })),
+        unknown: match.unknown,
+        noCast: !row.cast,
+      };
+    }),
+  };
+}
+
+export type BulkAddResult = { added: number; createdArtists: number; failed: { title: string; error: string }[]; error?: string };
+
+/** newArtists: 출연진 중 새로 만들 아티스트 이름. publish: 바로 공개 */
+export async function addKopisShows(ids: number[], options: { newArtists: string[]; publish: boolean }): Promise<BulkAddResult> {
+  await assertAdmin();
+  if (ids.length > MAX_ADD) return { added: 0, createdArtists: 0, failed: [], error: `한 번에 ${MAX_ADD}개까지 추가할 수 있어요` };
+
+  const createdArtists = await createArtists(options.newArtists);
+  const [rows, artists] = await Promise.all([selectPending(ids), listArtistOptions()]);
 
   const failed: BulkAddResult['failed'] = [];
   let added = 0;
   // KOPIS 요청이 몰리지 않게 하나씩 처리한다.
   for (const report of rows) {
-    const error = await addOne(report, artists);
+    const error = await addOne(report, artists, options.publish);
     if (error) failed.push({ title: report.title, error });
     else added++;
   }
+  if (createdArtists) updateTag('catalog');
   revalidatePath('/admin/reports');
-  return { added, failed };
+  return { added, createdArtists, failed };
+}
+
+/** 이름만으로 아티스트를 만든다. id 는 이름으로 자동, Spotify 에 이름이 똑같은 아티스트가 있으면 연결한다. 만든 수를 돌려준다. */
+async function createArtists(names: string[]) {
+  const existing = await listArtistOptions();
+  const knownNames = new Set(existing.map((artist) => normalize(artist.name)));
+  const takenIds = new Set(existing.map((artist) => artist.id));
+  let created = 0;
+  for (const raw of names) {
+    const name = raw.trim().slice(0, 100);
+    if (!name || knownNames.has(normalize(name))) continue;
+    knownNames.add(normalize(name));
+
+    const spotify = (await searchArtists(name, 5).catch(() => [])).find((artist) => normalize(artist.name) === normalize(name));
+    const id = uniqueSlug(artistSlug(name) || 'artist', takenIds);
+    takenIds.add(id);
+    await db.insert(artistsTable).values({ id, name, spotifyArtistId: spotify?.id ?? null, spotifyImageUrl: spotify?.imageLarge ?? null });
+    created++;
+  }
+  return created;
 }
 
 /** 실패하면 이유를 돌려준다. */
-async function addOne(report: typeof reports.$inferSelect, artists: { id: string; name: string }[]) {
+async function addOne(report: typeof reports.$inferSelect, artists: { id: string; name: string }[], publish: boolean) {
   const externalId = report.externalId ?? '';
   const kopis = await getKopisShow(externalId).catch(() => undefined);
 
@@ -81,14 +141,6 @@ async function addOne(report: typeof reports.$inferSelect, artists: { id: string
     };
   }
 
-  // 등록된 아티스트 이름이 공연 이름이나 출연진에 그대로 있으면 라인업에 넣는다 (나온 순서대로).
-  const text = normalize(`${report.title} ${kopis?.cast ?? ''}`);
-  const artistIds = artists
-    .map((artist) => ({ id: artist.id, at: normalize(artist.name).length >= 2 ? text.indexOf(normalize(artist.name)) : -1 }))
-    .filter((match) => match.at >= 0)
-    .sort((a, b) => a.at - b.at)
-    .map((match) => match.id);
-
   const result = await saveShow(null, {
     id: `kopis-${externalId.toLowerCase()}`,
     category: draft.category ?? 'indie',
@@ -103,8 +155,9 @@ async function addOne(report: typeof reports.$inferSelect, artists: { id: string
     price: draft.price ?? '',
     ticketOpenAt: '',
     soldOut: false,
-    isPublished: false,
-    artistIds,
+    isPublished: publish,
+    // 출연진 순서대로, 그다음 공연 이름에 나온 아티스트
+    artistIds: matchCast(kopis?.cast ?? report.cast, report.title, artists).artistIds,
     vendors: draft.ticketVendors.flatMap((vendor) => (vendor.url && /^https?:\/\//.test(vendor.url) ? [{ name: vendor.name, url: vendor.url }] : [])),
     stages: [],
     slots: [],
@@ -115,18 +168,5 @@ async function addOne(report: typeof reports.$inferSelect, artists: { id: string
   await db.update(reports).set({ status: 'added' }).where(eq(reports.id, report.id));
 }
 
-/** KOPIS 포스터를 webp 로 바꿔 R2 에 올린다. 실패하면 포스터 없이 만든다. */
-async function copyPoster(url: string | null | undefined) {
-  if (!url?.startsWith('https://kopis.or.kr/')) return undefined;
-  try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
-    if (!response.ok) return undefined;
-    const webp = await sharp(Buffer.from(await response.arrayBuffer()))
-      .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 82 })
-      .toBuffer();
-    return await putObject(`shows/${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.webp`, webp, 'image/webp');
-  } catch {
-    return undefined;
-  }
-}
+/** KOPIS 포스터를 R2 로 복사한다. 실패하면 포스터 없이 만든다. */
+const copyPoster = async (url: string | null | undefined) => (url ? copyRemoteImage(url) : undefined);

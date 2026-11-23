@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import KopisCastButton from '@/components/admin/KopisCastButton';
 import KopisImportButton from '@/components/admin/KopisImportButton';
 import KopisList from '@/components/admin/KopisList';
 import ReportStatusSelect from '@/components/admin/ReportStatusSelect';
@@ -20,7 +21,7 @@ type KopisStatus = (typeof KOPIS_STATUS)[number][0];
 export default async function AdminReportsPage({ searchParams }: PageProps<'/admin/reports'>) {
   await requireAdmin();
   const params = await searchParams;
-  const tab = params.tab === 'kopis' ? 'kopis' : 'user';
+  const tab = params.tab === 'user' ? 'user' : 'kopis';
   const status = KOPIS_STATUS.find(([key]) => key === params.status)?.[0] ?? 'pending';
 
   return (
@@ -29,8 +30,8 @@ export default async function AdminReportsPage({ searchParams }: PageProps<'/adm
       <nav className="mt-4 flex gap-1 text-sm">
         {(
           [
-            ['kopis', 'KOPIS', '/admin/reports?tab=kopis'],
-            ['user', '사용자 제보', '/admin/reports'],
+            ['kopis', 'KOPIS', '/admin/reports'],
+            ['user', '사용자 제보', '/admin/reports?tab=user'],
           ] as const
         ).map(([key, label, href]) => (
           <Link
@@ -95,11 +96,11 @@ async function KopisReports({ status }: { status: KopisStatus }) {
   // febble 공연장은 "공연장, 도시" 로 적으므로 앞부분만 본다.
   const venues = [...new Set(hints.venues.map((venue) => venue.split(',')[0].trim()).filter((venue) => normalize(venue).length >= 2))];
 
-  // 등록된 아티스트 이름이 공연 이름에 있거나, febble 에 올린 적 있는 공연장이면 '관련'.
+  // 등록된 아티스트 이름이 공연 이름·출연진에 있거나, febble 에 올린 적 있는 공연장이면 '관련'.
   const rows = reports
     .map((report) => ({
       report,
-      artistMatches: artists.filter((name) => normalize(report.title).includes(normalize(name))),
+      artistMatches: artists.filter((name) => normalize(`${report.title} ${report.cast ?? ''}`).includes(normalize(name))),
       venueMatches: venues.filter((venue) => normalize(report.venue ?? '').includes(normalize(venue))),
     }))
     // 아티스트가 겹치는 공연 → 공연장만 겹치는 공연 → 나머지. 같은 순위 안에서는 날짜순 (안정 정렬).
@@ -114,15 +115,19 @@ async function KopisReports({ status }: { status: KopisStatus }) {
           KOPIS(공연예술통합전산망)에 등록된 앞으로 60일의 대중음악 공연이에요. {KOPIS_STATUS.find(([key]) => key === status)![1]} {reports.length}건
           중 관련 {related}건.
           <br />
-          등록된 아티스트가 나오는 공연, febble 에 올린 적 있는 공연장의 공연 순으로 위에 보여줘요. 여러 개를 골라 비공개 공연으로 추가하거나 반려할 수 있어요.
+          등록된 아티스트가 나오는 공연, febble 에 올린 적 있는 공연장의 공연 순으로 위에 보여줘요. 여러 개를 골라 공연으로 추가(출연진으로 라인업·새
+          아티스트까지)하거나 반려할 수 있어요.
         </p>
-        <KopisImportButton />
+        <div className="flex shrink-0 gap-2">
+          {status === 'pending' && <KopisCastButton missing={reports.filter((report) => report.cast === null).length} />}
+          <KopisImportButton />
+        </div>
       </div>
       <nav className="mt-4 flex gap-1 text-xs">
         {KOPIS_STATUS.map(([key, label]) => (
           <Link
             key={key}
-            href={key === 'pending' ? '/admin/reports?tab=kopis' : `/admin/reports?tab=kopis&status=${key}`}
+            href={key === 'pending' ? '/admin/reports' : `/admin/reports?status=${key}`}
             className={cn(
               'rounded-full border px-3 py-1',
               status === key ? 'border-foreground bg-foreground text-background' : 'text-muted-foreground hover:bg-accent',
@@ -145,6 +150,7 @@ async function KopisReports({ status }: { status: KopisStatus }) {
           title: report.title,
           date: report.date,
           venue: report.venue,
+          cast: report.cast,
           poster: report.poster,
           status: report.status,
           artistMatches,

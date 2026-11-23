@@ -301,6 +301,8 @@ export const reports = pgTable(
     /** KOPIS 공연 ID (PF000000). 같은 공연을 두 번 가져오지 않는다. */
     externalId: text('external_id').unique(),
     poster: text('poster'),
+    /** KOPIS 출연진 문구 그대로. null 이면 아직 상세를 받지 않았고, '' 이면 KOPIS 에 출연진이 없다. */
+    cast: text('cast'),
     createdAt: createdAt(),
   },
   (t) => [index('reports_status_idx').on(t.status, t.createdAt)],
