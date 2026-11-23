@@ -63,6 +63,8 @@ export async function getShowForEdit(id: string) {
       price: t.shows.price,
       soldOut: t.shows.soldOut,
       isPublished: t.shows.isPublished,
+      kopisId: t.shows.kopisId,
+      details: t.shows.details,
       // 입력칸(datetime-local)은 공연 현지 시각을 쓴다.
       ticketOpenAt: sql<string | null>`to_char(${t.shows.ticketOpenAt} AT TIME ZONE ${t.shows.timeZone}, 'YYYY-MM-DD"T"HH24:MI')`,
     })

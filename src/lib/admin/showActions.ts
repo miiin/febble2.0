@@ -3,7 +3,7 @@
 import { and, eq, notInArray, sql } from 'drizzle-orm';
 import { updateTag } from 'next/cache';
 import { db } from '@/db';
-import { shows, showArtists, stages, ticketVendors, timetableSlots } from '@/db/schema';
+import { type ShowDetails, shows, showArtists, stages, ticketVendors, timetableSlots } from '@/db/schema';
 import { assertAdmin } from '@/lib/admin/guard';
 import { type ActionResult, check, DATE_RE, InputError, isReferenced, pgCode, SLUG_RE, TIME_RE, toResult } from '@/lib/admin/validate';
 
@@ -28,7 +28,21 @@ export type ShowInput = {
   /** id 가 있으면 기존 스테이지. key 는 화면에서 무대가 스테이지를 가리키는 값 */
   stages: { id?: number; key: string; name: string }[];
   slots: { id?: number; stageKey: string; artistId: string; date: string; start: string; end: string }[];
+  /** KOPIS 공연 ID 또는 '' */
+  kopisId: string;
+  details: ShowDetails;
 };
+
+// 빈 문구는 빼고, 모두 비면 null 로 저장한다.
+function cleanDetails(details: ShowDetails): ShowDetails | null {
+  const { images = [], ...texts } = details;
+  const cleaned: ShowDetails = Object.fromEntries(
+    Object.entries(texts).flatMap(([key, value]) => (typeof value === 'string' && value.trim() ? [[key, value.trim()]] : [])),
+  );
+  const urls = images.filter((url) => /^https:\/\//.test(url));
+  if (urls.length) cleaned.images = urls;
+  return Object.keys(cleaned).length ? cleaned : null;
+}
 
 const empty = (value: string) => (value.trim() === '' ? null : value.trim());
 
@@ -80,6 +94,8 @@ export async function saveShow(existingId: string | null, input: ShowInput): Pro
       ticketOpenAt: input.ticketOpenAt ? sql`(${input.ticketOpenAt.replace('T', ' ')}::timestamp AT TIME ZONE ${input.timeZone})` : null,
       soldOut: input.soldOut,
       isPublished: input.isPublished,
+      kopisId: empty(input.kopisId),
+      details: cleanDetails(input.details),
     };
 
     await db.transaction(async (tx) => {

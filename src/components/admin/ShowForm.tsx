@@ -17,7 +17,9 @@ import { Label } from '@/components/shadcn/label';
 import { Switch } from '@/components/shadcn/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/shadcn/table';
 import { Textarea } from '@/components/shadcn/textarea';
+import type { ShowDetails } from '@/db/schema';
 import type { ShowForEdit } from '@/lib/admin/queries';
+import { uploadImage } from '@/lib/admin/mediaActions';
 import { readPoster } from '@/lib/admin/posterAI';
 import { setReportStatus } from '@/lib/admin/reportActions';
 import { draftFromReport } from '@/lib/admin/reportAI';
@@ -72,10 +74,14 @@ function toInput(show?: ShowForEdit): ShowInput {
       vendors: [],
       stages: [],
       slots: [],
+      kopisId: '',
+      details: {},
     };
   }
   return {
     ...show,
+    kopisId: show.kopisId ?? '',
+    details: show.details ?? {},
     image: show.image ?? '',
     description: show.description ?? '',
     price: show.price ?? '',
@@ -84,6 +90,14 @@ function toInput(show?: ShowForEdit): ShowInput {
     slots: show.slots.map((slot) => ({ ...slot, stageKey: String(slot.stageId) })),
   };
 }
+
+const DETAIL_FIELDS = [
+  ['runtime', '공연 시간', '120분'],
+  ['age', '관람 연령', '만 7세 이상'],
+  ['cast', '출연진', ''],
+  ['schedule', '회차 안내', '토요일(18:00), 일요일(17:00)'],
+  ['organizer', '주최·기획', '주최: ○○ / 기획: ○○'],
+] as const;
 
 const move = <T,>(list: T[], index: number, delta: number) => {
   const next = [...list];
@@ -99,6 +113,23 @@ export default function ShowForm({ show, artists, report }: Props) {
   const [error, setError] = useState<string>();
   const [isPending, startTransition] = useTransition();
   const set = <K extends keyof ShowInput>(key: K, value: ShowInput[K]) => setForm((prev) => ({ ...prev, [key]: value }));
+  const setDetail = <K extends keyof ShowDetails>(key: K, value: ShowDetails[K]) =>
+    setForm((prev) => ({ ...prev, details: { ...prev.details, [key]: value } }));
+  // 공연 안내 이미지: 고른 순서대로 R2 에 올려 뒤에 붙인다.
+  const detailImageInput = useRef<HTMLInputElement>(null);
+  const [isUploading, startUploading] = useTransition();
+  const uploadDetailImages = (files: File[]) =>
+    startUploading(async () => {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.set('folder', 'shows');
+        formData.set('file', await shrinkImage(file));
+        const result = await uploadImage(formData).catch(() => ({ error: '올리지 못했어요. 잠시 뒤 다시 시도해주세요.', url: undefined }));
+        const url = result.url;
+        if (url) setForm((prev) => ({ ...prev, details: { ...prev.details, images: [...(prev.details.images ?? []), url] } }));
+        else toast.error(`${file.name}: ${result.error}`);
+      }
+    });
   const artistName = (id: string) => artists.find((artist) => artist.id === id)?.name ?? id;
   const artistOptions = artists.map((artist) => ({ value: artist.id, label: artist.name }));
   const [posterNote, setPosterNote] = useState<{ filled: string[]; newArtists: string[]; notes: string[] }>();
@@ -228,6 +259,9 @@ export default function ShowForm({ show, artists, report }: Props) {
           report!.source === 'kopis' ? 'KOPIS 정보' : '제보',
         );
       else toast.error(result.error);
+      // KOPIS 에서 만든 공연이면 어느 KOPIS 공연인지 남긴다 (공연 안내는 필요할 때 직접 넣는다).
+      const kopisId = 'kopisId' in result ? result.kopisId : undefined;
+      if (kopisId) setForm((prev) => ({ ...prev, kopisId: prev.kopisId || kopisId }));
     });
 
   const read = () =>
@@ -494,6 +528,86 @@ export default function ShowForm({ show, artists, report }: Props) {
             하고 이 화면을 새로고침하세요.
           </p>
         </div>
+      </Section>
+
+      <Section
+        title="Details"
+        description="필요한 공연에만 직접 넣어요. 넣은 항목만 공연 상세에 보여요 (공연 시간·관람 연령은 위 정보 표, 나머지는 아래 ‘공연 안내’). 예: 타임테이블 전 페스티벌 라인업 발표 이미지."
+      >
+        <div className="grid grid-cols-2 gap-4">
+          {DETAIL_FIELDS.map(([key, label, placeholder]) => (
+            <Field key={key} label={label} htmlFor={`detail-${key}`}>
+              <Input
+                id={`detail-${key}`}
+                value={form.details[key] ?? ''}
+                placeholder={placeholder}
+                onChange={(e) => setDetail(key, e.target.value)}
+              />
+            </Field>
+          ))}
+        </div>
+        <Field label="줄거리·안내" htmlFor="detail-story">
+          <Textarea id="detail-story" rows={3} value={form.details.story ?? ''} onChange={(e) => setDetail('story', e.target.value)} />
+        </Field>
+        <Field label="이미지" hint="라인업 발표·공지 이미지 등. 여러 장이면 위에서부터 이어서 보여요.">
+          <ul className="flex flex-wrap gap-2">
+            {(form.details.images ?? []).map((url, index, images) => (
+              <li key={url} className="relative">
+                <a href={url} target="_blank" rel="noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="h-28 w-20 rounded-sm border object-cover object-top" />
+                </a>
+                <span className="absolute bottom-1 left-1 rounded-sm bg-background/80 px-1 text-[10px]">{index + 1}</span>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="secondary"
+                  aria-label={`이미지 ${index + 1} 빼기`}
+                  className="absolute top-1 right-1 size-6"
+                  onClick={() => setDetail('images', images.filter((item) => item !== url))}
+                >
+                  <X />
+                </Button>
+              </li>
+            ))}
+            <li>
+              <button
+                type="button"
+                disabled={isUploading}
+                onClick={() => detailImageInput.current?.click()}
+                className="flex h-28 w-20 flex-col items-center justify-center gap-1 rounded-sm border border-dashed bg-muted/50 text-xs text-muted-foreground hover:border-foreground"
+              >
+                <Plus className="size-4" />
+                {isUploading ? '올리는 중…' : '추가'}
+              </button>
+            </li>
+          </ul>
+          <input
+            ref={detailImageInput}
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            onChange={(e) => {
+              uploadDetailImages([...(e.target.files ?? [])]);
+              e.target.value = '';
+            }}
+          />
+        </Field>
+        {form.kopisId && (
+          <p className="text-[11px] text-muted-foreground">
+            KOPIS 공연{' '}
+            <a
+              href={`https://www.kopis.or.kr/por/db/pblprfr/pblprfrView.do?menuId=MNU_00020&mt20Id=${form.kopisId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              {form.kopisId}
+            </a>{' '}
+            에서 가져온 공연이에요.
+          </p>
+        )}
       </Section>
 
       <Section title="Tickets" description="여러 곳이면 사이트 하단 버튼에서 고르게 해요.">

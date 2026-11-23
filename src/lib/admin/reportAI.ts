@@ -14,7 +14,10 @@ import { getKopisShow, type KopisDetail } from '@/lib/kopis';
 // KOPIS 초안에서 AI 가 채우는 부분. 나머지는 kopisBaseDraft 가 규칙으로 채운다.
 const KopisLineupSchema = ShowDraftSchema.pick({ slug: true, lineup: true, notes: true });
 
-export async function draftFromReport(reportId: number): Promise<DraftResult & { linkNote?: string }> {
+/** KOPIS 제보면 kopisId 가 같이 온다. */
+type ReportDraftResult = DraftResult & { linkNote?: string; kopisId?: string };
+
+export async function draftFromReport(reportId: number): Promise<ReportDraftResult> {
   await assertAdmin();
   const report = await getReport(reportId);
   if (!report) return { error: '제보를 찾을 수 없어요' };
@@ -81,7 +84,7 @@ async function draftFromKopis(
   artists: { id: string; name: string }[],
   artistIds: Set<string>,
   showIds: Set<string>,
-): Promise<DraftResult & { linkNote?: string }> {
+): Promise<ReportDraftResult> {
   const base = kopisBaseDraft(kopis);
   const result = await askClaude({
     label: 'KOPIS 라인업',
@@ -106,5 +109,6 @@ async function draftFromKopis(
   return {
     draft: cleanShowDraft({ ...base, ...ai, notes: [...base.notes, ...ai.notes] }, artistIds, showIds),
     linkNote: 'KOPIS 등록 정보로 채웠어요. 티켓 오픈 일시는 KOPIS 에 없어서 비워뒀어요.',
+    kopisId: kopis.id,
   };
 }
