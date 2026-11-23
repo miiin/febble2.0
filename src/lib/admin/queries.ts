@@ -9,6 +9,8 @@ export async function listArtists() {
     .select({
       id: t.artists.id,
       name: t.artists.name,
+      image: t.artists.image,
+      spotifyImageUrl: t.artists.spotifyImageUrl,
       genres: t.artists.genres,
       isEditorPick: t.artists.isEditorPick,
       spotifyArtistId: t.artists.spotifyArtistId,
@@ -35,6 +37,7 @@ export async function listShows() {
     .select({
       id: t.shows.id,
       title: t.shows.title,
+      image: t.shows.image,
       category: t.shows.category,
       startDate: t.shows.startDate,
       endDate: t.shows.endDate,

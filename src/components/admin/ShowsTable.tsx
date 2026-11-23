@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import type { ColumnDef } from '@tanstack/react-table';
 import DataTable from '@/components/admin/DataTable';
-import { StatusPill } from '@/components/admin/ui';
+import { ListThumb, StatusPill } from '@/components/admin/ui';
 import { formatRange } from '@/lib/date';
 import { CATEGORY_LABEL, type ShowCategory } from '@/mocks/shows';
 
 export type ShowRow = {
   id: string;
   title: string;
+  image: string | null;
   category: ShowCategory;
   startDate: string;
   endDate: string;
@@ -23,9 +24,12 @@ const columns: ColumnDef<ShowRow>[] = [
     accessorKey: 'title',
     header: '공연',
     cell: ({ row }) => (
-      <Link href={`/admin/shows/${row.original.id}`} className="font-medium underline-offset-2 hover:underline">
-        {row.original.title}
-        <span className="block text-[11px] font-normal text-muted-foreground">{row.original.id}</span>
+      <Link href={`/admin/shows/${row.original.id}`} className="group flex items-center gap-3">
+        <ListThumb src={row.original.image} className="h-12 w-9 rounded-sm" />
+        <span className="font-medium underline-offset-2 group-hover:underline">
+          {row.original.title}
+          <span className="block text-[11px] font-normal text-muted-foreground">{row.original.id}</span>
+        </span>
       </Link>
     ),
   },

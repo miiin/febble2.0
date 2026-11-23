@@ -26,6 +26,7 @@ import { draftFromReport } from '@/lib/admin/reportAI';
 import type { ShowDraft } from '@/lib/admin/showDraft';
 import { deleteShow, saveShow, type ShowInput } from '@/lib/admin/showActions';
 import { readTimetable, type TimetableDraft } from '@/lib/admin/timetableAI';
+import { showSlug, uniqueSlug } from '@/lib/slug';
 
 type Option = { id: string; name: string };
 
@@ -46,6 +47,8 @@ type Props = {
   artists: Option[];
   /** 제보에서 만들 때: 폼 위에 제보를 보여주고, 저장하면 제보를 '추가함'으로 바꾼다 */
   report?: ReportForShow;
+  /** 새 공연: 이미 있는 공연 id (자동으로 채운 id 가 겹치지 않게) */
+  takenIds?: string[];
 };
 
 const TIME_ZONES = ['Asia/Seoul', 'Asia/Tokyo', 'Asia/Taipei', 'Asia/Bangkok', 'Europe/London', 'America/New_York', 'America/Los_Angeles'];
@@ -107,12 +110,15 @@ const move = <T,>(list: T[], index: number, delta: number) => {
 };
 
 // 공연 편집: 기본 정보, 라인업, 예매처, (페스티벌) 타임테이블을 한 번에 저장한다.
-export default function ShowForm({ show, artists, report }: Props) {
+export default function ShowForm({ show, artists, report, takenIds = [] }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<ShowInput>(() => toInput(show));
   const [error, setError] = useState<string>();
   const [isPending, startTransition] = useTransition();
   const set = <K extends keyof ShowInput>(key: K, value: ShowInput[K]) => setForm((prev) => ({ ...prev, [key]: value }));
+  // 새 공연 id 는 제목(영문 표기 우선)+연도로 자동으로 채운다. 직접 고치거나 AI 가 제안하면 그 값을 쓴다.
+  const [idEdited, setIdEdited] = useState(false);
+  const id = show || idEdited ? form.id : uniqueSlug(showSlug(form.title, form.startDate), new Set(takenIds));
   const setDetail = <K extends keyof ShowDetails>(key: K, value: ShowDetails[K]) =>
     setForm((prev) => ({ ...prev, details: { ...prev.details, [key]: value } }));
   // 공연 안내 이미지: 고른 순서대로 R2 에 올려 뒤에 붙인다.
@@ -147,7 +153,10 @@ export default function ShowForm({ show, artists, report }: Props) {
       filled.push(label);
     };
     // id 는 새 공연에서만 정한다 (만든 뒤에는 바꿀 수 없다).
-    if (!show) fill('id', draft.slug, 'id');
+    if (!show && !idEdited && draft.slug) {
+      fill('id', draft.slug, 'id', true);
+      setIdEdited(true);
+    }
     fill('title', draft.title, '공연 이름');
     // 분류·시간대는 기본값이 있어서, 새 공연이거나 기본값 그대로일 때만 바꾼다.
     fill('category', draft.category, '분류', !show);
@@ -274,9 +283,11 @@ export default function ShowForm({ show, artists, report }: Props) {
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     startTransition(async () => {
-      const result = await saveShow(show?.id ?? null, form);
+      const result = await saveShow(show?.id ?? null, { ...form, id });
       setError(result.error);
       if (result.error) return;
+      // 외부 이미지 주소는 R2 로 복사되어 주소가 바뀐다.
+      if (result.image !== undefined) set('image', result.image);
       if (report) await setReportStatus(report.id, 'added').catch(() => toast.error('제보 상태는 바꾸지 못했어요. 제보 화면에서 바꿔주세요.'));
       toast.success(show ? '저장했어요' : report ? '공연을 추가하고 제보를 ‘추가함’으로 바꿨어요' : '공연을 추가했어요');
       if (show) router.refresh();
@@ -383,8 +394,21 @@ export default function ShowForm({ show, artists, report }: Props) {
 
       <Section title="Info">
         {!show && (
-          <Field label="id (주소)" htmlFor="show-id" hint="영문 소문자·숫자·하이픈. /shows/[id] 주소가 되고 나중에 바꿀 수 없어요.">
-            <Input id="show-id" required value={form.id} onChange={(e) => set('id', e.target.value)} placeholder="busan-rock-2027" />
+          <Field
+            label="id (주소)"
+            htmlFor="show-id"
+            hint="공연 이름과 시작일로 자동으로 채워요. 대문자·띄어쓰기는 저장할 때 소문자·하이픈으로 바꿔요. /shows/[id] 주소가 되고 나중에 바꿀 수 없어요."
+          >
+            <Input
+              id="show-id"
+              required
+              value={id}
+              onChange={(e) => {
+                set('id', e.target.value);
+                setIdEdited(true);
+              }}
+              placeholder="busan-rock-2027"
+            />
           </Field>
         )}
         <div className="grid grid-cols-2 gap-4">
@@ -564,7 +588,12 @@ export default function ShowForm({ show, artists, report }: Props) {
                   variant="secondary"
                   aria-label={`이미지 ${index + 1} 빼기`}
                   className="absolute top-1 right-1 size-6"
-                  onClick={() => setDetail('images', images.filter((item) => item !== url))}
+                  onClick={() =>
+                    setDetail(
+                      'images',
+                      images.filter((item) => item !== url),
+                    )
+                  }
                 >
                   <X />
                 </Button>
