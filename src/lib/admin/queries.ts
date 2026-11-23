@@ -140,13 +140,22 @@ export async function listReports() {
   return db.select().from(t.reports).where(eq(t.reports.source, 'user')).orderBy(desc(t.reports.createdAt));
 }
 
-/** KOPIS 에서 가져와 아직 처리하지 않은 공연 (날짜순) */
-export async function listKopisPending() {
+/** KOPIS 에서 가져온 공연 중 status 인 것 (날짜순) */
+export async function listKopisReports(status: (typeof t.reportStatus.enumValues)[number]) {
   return db
     .select()
     .from(t.reports)
-    .where(and(eq(t.reports.source, 'kopis'), eq(t.reports.status, 'pending')))
+    .where(and(eq(t.reports.source, 'kopis'), eq(t.reports.status, status)))
     .orderBy(asc(t.reports.date));
+}
+
+export async function countKopisReports() {
+  const rows = await db
+    .select({ status: t.reports.status, n: count() })
+    .from(t.reports)
+    .where(eq(t.reports.source, 'kopis'))
+    .groupBy(t.reports.status);
+  return Object.fromEntries(rows.map((row) => [row.status, row.n])) as Partial<Record<(typeof t.reportStatus.enumValues)[number], number>>;
 }
 
 /** KOPIS 공연과 febble 의 관련을 찾는 데 쓰는 아티스트 이름·공연장 */
