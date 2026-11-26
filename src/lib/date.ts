@@ -30,6 +30,19 @@ export function formatMonth(iso: string) {
   return `${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+/** iso 에서 days 만큼 지난 날 'YYYY-MM-DD' */
+export function addDays(iso: string, days: number) {
+  const date = parse(iso);
+  date.setDate(date.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** 요일 번호. 0 일요일 ~ 6 토요일 */
+export function weekday(iso: string) {
+  return parse(iso).getDay();
+}
+
 /** from 에서 to 까지 며칠 남았는지. 지난 날짜면 음수. */
 export function daysBetween(from: string, to: string) {
   return Math.round((parse(to).getTime() - parse(from).getTime()) / 86_400_000);

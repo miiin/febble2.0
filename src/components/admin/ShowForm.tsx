@@ -454,8 +454,8 @@ export default function ShowForm({ show, artists, report, takenIds = [] }: Props
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="장소" htmlFor="venue">
-            <Input id="venue" required value={form.venue} onChange={(e) => set('venue', e.target.value)} />
+          <Field label="장소" htmlFor="venue" hint="'장소, 도시'로 적어주세요. 도시는 공연 목록의 지역 필터에 쓰여요.">
+            <Input id="venue" required value={form.venue} onChange={(e) => set('venue', e.target.value)} placeholder="롤링홀, 서울" />
           </Field>
           <Field label="시간대" htmlFor="timeZone" hint="해외 공연은 꼭 바꿔주세요 (캘린더·티켓 오픈 시각 기준)">
             <Input id="timeZone" list="time-zones" value={form.timeZone} onChange={(e) => set('timeZone', e.target.value)} />
