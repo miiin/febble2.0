@@ -44,6 +44,8 @@ export type Show = {
   ticketOpenAt?: string; // 'YYYY-MM-DD HH:mm'
   /** DB 등록일 'YYYY-MM-DD'. 홈 For you 의 '새공연' 배지에 쓴다 (mock 에는 없음). */
   createdAt?: string;
+  /** 처음 공개한 시각 (ISO). Following 의 NEW 에 쓴다 (mock 에는 없음). */
+  publishedAt?: string;
   /** 어드민이 직접 넣은 공연 안내 (공연 시간·관람 연령·이미지 등) */
   details?: ShowDetails;
   /** 페스티벌 시간표. 없으면 라인업만 보여준다. */

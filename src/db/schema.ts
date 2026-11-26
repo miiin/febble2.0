@@ -35,6 +35,8 @@ export const users = pgTable('users', {
   image: text('image'),
   /** admin 이면 /admin(CMS) 에 들어갈 수 있다. */
   role: userRole('role').notNull().default('user'),
+  /** Following 화면을 마지막으로 본 시각. 이후에 공개된 공연에 NEW 를 붙인다. */
+  followingSeenAt: timestamp('following_seen_at', { withTimezone: true }),
   createdAt: createdAt(),
 });
 
@@ -126,6 +128,8 @@ export const shows = pgTable(
     ticketOpenAt: timestamp('ticket_open_at', { withTimezone: true }),
     /** 공개 여부. CMS 에서 작성 중인 공연은 false 로 숨긴다. */
     isPublished: boolean('is_published').notNull().default(false),
+    /** 처음 공개한 시각. 비공개로 바꾸면 비운다. Following 의 NEW 기준. */
+    publishedAt: timestamp('published_at', { withTimezone: true }),
     /** KOPIS 에서 가져온 공연이면 KOPIS 공연 ID (PF…). 어드민에서 KOPIS 페이지 링크를 보여준다. */
     kopisId: text('kopis_id'),
     details: jsonb('details').$type<ShowDetails>(),

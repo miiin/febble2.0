@@ -64,6 +64,12 @@ export async function getFollowedArtistIds(userId: string) {
   return rows.map((row) => row.artistId);
 }
 
+/** Following 화면을 마지막으로 본 시각 (ISO). 처음이면 undefined */
+export async function getFollowingSeenAt(userId: string) {
+  const [row] = await db.select({ seenAt: users.followingSeenAt }).from(users).where(eq(users.id, userId));
+  return row?.seenAt?.toISOString();
+}
+
 export async function getLikedShowIds(userId: string) {
   const rows = await db.select({ showId: showLikes.showId }).from(showLikes).where(eq(showLikes.userId, userId));
   return rows.map((row) => row.showId);

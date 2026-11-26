@@ -1,11 +1,12 @@
 import { Suspense } from 'react';
 import LoginRequired from '@/components/auth/LoginRequired';
 import FollowingTabs, { type NewsItem } from '@/components/me/FollowingTabs';
+import MarkFollowingSeen from '@/components/me/MarkFollowingSeen';
 import SectionTitle from '@/components/ui/SectionTitle';
 import { daysBetween, formatRange } from '@/lib/date';
 import { getArtist, getShowsByArtist } from '@/lib/catalog';
 import { getToday } from '@/lib/today';
-import { getCurrentUser, getFollowedArtistIds } from '@/lib/user';
+import { getCurrentUser, getFollowedArtistIds, getFollowingSeenAt } from '@/lib/user';
 
 const OPEN_SOON_DAYS = 7;
 
@@ -24,7 +25,7 @@ async function Following() {
   const user = await getCurrentUser();
   if (!user) return <LoginRequired message={'아티스트를 팔로우하고\n공연 소식을 받아보세요'} />;
 
-  const followedArtistIds = await getFollowedArtistIds(user.id);
+  const [followedArtistIds, seenAt] = await Promise.all([getFollowedArtistIds(user.id), getFollowingSeenAt(user.id)]);
   const artists = (await Promise.all(followedArtistIds.map(getArtist))).filter((artist) => artist !== undefined);
 
   // 팔로우한 아티스트의 앞으로 있을 공연을 날짜 순으로.
@@ -43,10 +44,17 @@ async function Following() {
             date: formatRange(show.startDate, show.endDate),
             venue: show.venue,
             openLabel: openDays >= 0 && openDays <= OPEN_SOON_DAYS ? `D-${openDays}` : undefined,
+            // 지난번에 본 뒤 공개된 공연. 처음 보는 거면 붙이지 않는다.
+            isNew: !!seenAt && !!show.publishedAt && show.publishedAt > seenAt,
           };
         }),
     )
     .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
-  return <FollowingTabs news={news} artists={artists} />;
+  return (
+    <>
+      <FollowingTabs news={news} artists={artists} />
+      <MarkFollowingSeen />
+    </>
+  );
 }

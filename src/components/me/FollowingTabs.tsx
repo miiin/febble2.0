@@ -16,6 +16,8 @@ export type NewsItem = {
   venue: string;
   /** 7일 안에 티켓 오픈이면 'D-3' 같은 라벨 */
   openLabel?: string;
+  /** 지난번에 본 뒤 새로 공개된 공연 */
+  isNew: boolean;
 };
 
 type Props = {
@@ -54,9 +56,10 @@ export default function FollowingTabs({ news, artists }: Props) {
                     </p>
                   </div>
                 </Link>
-                {item.openLabel && (
-                  <div className="absolute top-3 right-0">
-                    <Badge type="open-soon">오픈 {item.openLabel}</Badge>
+                {(item.isNew || item.openLabel) && (
+                  <div className="absolute top-3 right-0 flex flex-col items-end gap-1">
+                    {item.isNew && <Badge type="new">NEW</Badge>}
+                    {item.openLabel && <Badge type="open-soon">오픈 {item.openLabel}</Badge>}
                   </div>
                 )}
               </li>

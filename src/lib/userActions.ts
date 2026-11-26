@@ -4,7 +4,7 @@
 import { and, eq } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { db } from '@/db';
-import { artistFollows, showLikes, slotPicks } from '@/db/schema';
+import { artistFollows, showLikes, slotPicks, users } from '@/db/schema';
 
 async function requireUserId() {
   const userId = (await auth())?.user?.id;
@@ -29,4 +29,10 @@ export async function setSlotPicked(slotId: string, picked: boolean) {
   const id = Number(slotId);
   if (picked) await db.insert(slotPicks).values({ userId, slotId: id }).onConflictDoNothing();
   else await db.delete(slotPicks).where(and(eq(slotPicks.userId, userId), eq(slotPicks.slotId, id)));
+}
+
+/** Following 화면을 봤다고 기록한다. 다음에 볼 때 이 시각 이후에 공개된 공연에만 NEW 가 붙는다. */
+export async function markFollowingSeen() {
+  const userId = await requireUserId();
+  await db.update(users).set({ followingSeenAt: new Date() }).where(eq(users.id, userId));
 }

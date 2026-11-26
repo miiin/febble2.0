@@ -104,10 +104,13 @@ export async function saveShow(existingId: string | null, input: ShowInput): Pro
 
     await db.transaction(async (tx) => {
       if (existingId) {
-        await tx.update(shows).set(values).where(eq(shows.id, id));
+        await tx
+          .update(shows)
+          .set({ ...values, publishedAt: input.isPublished ? sql`coalesce(${shows.publishedAt}, now())` : null })
+          .where(eq(shows.id, id));
       } else {
         try {
-          await tx.insert(shows).values({ id, ...values });
+          await tx.insert(shows).values({ id, ...values, publishedAt: input.isPublished ? new Date() : null });
         } catch (error) {
           if (pgCode(error) === '23505') throw new InputError(`이미 있는 id 예요: ${id}`);
           throw error;
