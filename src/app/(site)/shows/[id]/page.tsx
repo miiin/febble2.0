@@ -9,8 +9,9 @@ import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
 import { getArtist, getShow, getShows } from '@/lib/catalog';
 import { formatRange, formatShort } from '@/lib/date';
+import { getToday } from '@/lib/today';
 import { getCurrentUser, getPickedSlotIds } from '@/lib/user';
-import { CATEGORY_LABEL, DEFAULT_TIME_ZONE, getTicketStatus, MOCK_TODAY } from '@/mocks/shows';
+import { CATEGORY_LABEL, DEFAULT_TIME_ZONE, getTicketStatus } from '@/mocks/shows';
 
 export async function generateStaticParams() {
   return (await getShows()).map((show) => ({ id: show.id }));
@@ -107,7 +108,7 @@ async function ShowDetail({ id }: { id: string }) {
 
       <ShowActionBar
         showId={show.id}
-        status={getTicketStatus(show, MOCK_TODAY)}
+        status={getTicketStatus(show, await getToday())}
         vendors={show.ticketVendors}
         ticketOpenAt={show.ticketOpenAt}
         hasTimetable={!!show.timetable}

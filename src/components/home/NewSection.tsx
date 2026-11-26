@@ -4,8 +4,8 @@ import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
 import type { getCatalog } from '@/lib/catalog';
 import { daysBetween, formatShort } from '@/lib/date';
+import { getToday } from '@/lib/today';
 import type { Badge as BadgeType } from '@/mocks/home';
-import { MOCK_TODAY } from '@/mocks/shows';
 
 const LIMIT = 5;
 const OPEN_SOON_DAYS = 7;
@@ -13,15 +13,16 @@ const OPEN_SOON_DAYS = 7;
 type Props = { catalog: Awaited<ReturnType<typeof getCatalog>> };
 
 // 최근 등록된 앞으로의 공연. 배지는 이번 호 Pick > 티켓 오픈 임박 순.
-export default function NewSection({ catalog }: Props) {
+export default async function NewSection({ catalog }: Props) {
+  const today = await getToday();
   const latestPick = catalog.pickIssues[0];
   const picked = new Set(latestPick ? [latestPick.main, ...latestPick.others].map((item) => item.showId) : []);
 
   const newShows = catalog.shows
-    .filter((show) => show.endDate >= MOCK_TODAY)
+    .filter((show) => show.endDate >= today)
     .slice(0, LIMIT)
     .map((show) => {
-      const openDays = show.ticketOpenAt ? daysBetween(MOCK_TODAY, show.ticketOpenAt.slice(0, 10)) : -1;
+      const openDays = show.ticketOpenAt ? daysBetween(today, show.ticketOpenAt.slice(0, 10)) : -1;
       const badge: { type: BadgeType; label: string } | undefined = picked.has(show.id)
         ? { type: 'pick', label: 'PICK' }
         : openDays >= 0 && openDays <= OPEN_SOON_DAYS

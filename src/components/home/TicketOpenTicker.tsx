@@ -1,15 +1,17 @@
 import Link from 'next/link';
 import { daysBetween } from '@/lib/date';
-import { MOCK_TODAY, type Show } from '@/mocks/shows';
+import { getToday } from '@/lib/today';
+import type { Show } from '@/mocks/shows';
 
 // 앞으로의 티켓 오픈을 가까운 순으로. 'D-2 실리카겔 연말공연 20:00'
 // 같은 목록을 두 번 이어 붙이고 -50% 이동해 끊김 없이 흐르게 한다.
-export default function TicketOpenTicker({ shows }: { shows: Show[] }) {
+export default async function TicketOpenTicker({ shows }: { shows: Show[] }) {
+  const today = await getToday();
   const ticketOpens = shows
-    .filter((show) => show.ticketOpenAt && show.ticketOpenAt.slice(0, 10) >= MOCK_TODAY)
+    .filter((show) => show.ticketOpenAt && show.ticketOpenAt.slice(0, 10) >= today)
     .sort((a, b) => a.ticketOpenAt!.localeCompare(b.ticketOpenAt!))
     .map((show) => {
-      const days = daysBetween(MOCK_TODAY, show.ticketOpenAt!.slice(0, 10));
+      const days = daysBetween(today, show.ticketOpenAt!.slice(0, 10));
       return `${days === 0 ? '오늘' : `D-${days}`} ${show.title} ${show.ticketOpenAt!.slice(11)}`;
     });
   if (ticketOpens.length === 0) return null;

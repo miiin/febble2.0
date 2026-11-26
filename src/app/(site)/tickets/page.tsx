@@ -3,12 +3,13 @@ import SectionTitle from '@/components/ui/SectionTitle';
 import Thumb from '@/components/ui/Thumb';
 import { daysBetween, formatShort } from '@/lib/date';
 import { getShows } from '@/lib/catalog';
-import { MOCK_TODAY } from '@/mocks/shows';
+import { getToday } from '@/lib/today';
 
 // 앞으로 열리는 예매 일정. 날짜별로 묶고 같은 날은 시간 순.
 export default async function TicketsPage() {
-  const upcoming = (await getShows())
-    .filter((show) => show.ticketOpenAt && show.ticketOpenAt.slice(0, 10) >= MOCK_TODAY)
+  const [allShows, today] = await Promise.all([getShows(), getToday()]);
+  const upcoming = allShows
+    .filter((show) => show.ticketOpenAt && show.ticketOpenAt.slice(0, 10) >= today)
     .sort((a, b) => a.ticketOpenAt!.localeCompare(b.ticketOpenAt!));
 
   const groups = new Map<string, typeof upcoming>();
@@ -24,7 +25,7 @@ export default async function TicketsPage() {
       {groups.size === 0 && <p className="mt-10 text-center text-sm">예정된 티켓 오픈이 없어요.</p>}
 
       {[...groups].map(([day, list]) => {
-        const days = daysBetween(MOCK_TODAY, day);
+        const days = daysBetween(today, day);
         return (
           <section key={day} className="mt-8">
             <h2 className="flex items-center gap-2">

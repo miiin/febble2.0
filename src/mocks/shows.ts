@@ -2,9 +2,6 @@
 // 백엔드는 이 구조에 맞춰 설계한다.
 import type { ShowDetails } from '@/db/schema';
 
-/** 로그인·서버 연동 전 기준 날짜. 실제 연동 시 서버의 오늘 날짜로 바꾼다. */
-export const MOCK_TODAY = '2026-11-18';
-
 export type ShowCategory = 'indie' | 'overseas' | 'festival';
 
 export const CATEGORY_LABEL: Record<ShowCategory, string> = {

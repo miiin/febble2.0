@@ -3,7 +3,8 @@ import LikeButton from '@/components/ui/LikeButton';
 import Thumb from '@/components/ui/Thumb';
 import { formatRange } from '@/lib/date';
 import type { PickIssue, PickItem } from '@/mocks/picks';
-import { MOCK_TODAY, type Show } from '@/mocks/shows';
+import { getToday } from '@/lib/today';
+import type { Show } from '@/mocks/shows';
 
 type Props = {
   issue: PickIssue;
@@ -13,21 +14,22 @@ type Props = {
   shows: Show[];
 };
 
-function resolve(item: PickItem, shows: Show[]) {
+function resolve(item: PickItem, shows: Show[], today: string) {
   const show = shows.find((candidate) => candidate.id === item.showId);
   if (!show) return undefined;
   return {
     ...show,
     description: item.description,
     date: formatRange(show.startDate, show.endDate),
-    isToday: show.startDate <= MOCK_TODAY && MOCK_TODAY <= show.endDate,
+    isToday: show.startDate <= today && today <= show.endDate,
   };
 }
 
 // Febble Pick 한 호. 홈 Pick 섹션과 Vol 상세가 같이 쓴다.
-export default function PickIssueView({ issue, label, shows }: Props) {
-  const main = resolve(issue.main, shows);
-  const others = issue.others.map((item) => resolve(item, shows)).filter((show) => show !== undefined);
+export default async function PickIssueView({ issue, label, shows }: Props) {
+  const today = await getToday();
+  const main = resolve(issue.main, shows, today);
+  const others = issue.others.map((item) => resolve(item, shows, today)).filter((show) => show !== undefined);
   if (!main) return null;
 
   return (

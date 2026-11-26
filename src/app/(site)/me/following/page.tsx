@@ -4,8 +4,8 @@ import FollowingTabs, { type NewsItem } from '@/components/me/FollowingTabs';
 import SectionTitle from '@/components/ui/SectionTitle';
 import { daysBetween, formatRange } from '@/lib/date';
 import { getArtist, getShowsByArtist } from '@/lib/catalog';
+import { getToday } from '@/lib/today';
 import { getCurrentUser, getFollowedArtistIds } from '@/lib/user';
-import { MOCK_TODAY } from '@/mocks/shows';
 
 const OPEN_SOON_DAYS = 7;
 
@@ -28,13 +28,13 @@ async function Following() {
   const artists = (await Promise.all(followedArtistIds.map(getArtist))).filter((artist) => artist !== undefined);
 
   // 팔로우한 아티스트의 앞으로 있을 공연을 날짜 순으로.
-  const showsByArtist = await Promise.all(artists.map((artist) => getShowsByArtist(artist.id)));
+  const [showsByArtist, today] = await Promise.all([Promise.all(artists.map((artist) => getShowsByArtist(artist.id))), getToday()]);
   const news: NewsItem[] = artists
     .flatMap((artist, index) =>
       showsByArtist[index]
-        .filter((show) => show.endDate >= MOCK_TODAY)
+        .filter((show) => show.endDate >= today)
         .map((show) => {
-          const openDays = show.ticketOpenAt ? daysBetween(MOCK_TODAY, show.ticketOpenAt.slice(0, 10)) : -1;
+          const openDays = show.ticketOpenAt ? daysBetween(today, show.ticketOpenAt.slice(0, 10)) : -1;
           return {
             showId: show.id,
             startDate: show.startDate,
