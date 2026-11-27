@@ -39,8 +39,7 @@ async function My() {
   const liked = sortByDate((await Promise.all(likedShowIds.map(getShow))).filter((show) => show !== undefined));
   const timetables = (
     await Promise.all(Object.entries(pickedSlotIds).map(async ([showId, slotIds]) => ({ show: await getShow(showId), count: slotIds.length })))
-  )
-    .filter((item) => item.show && item.count > 0);
+  ).filter((item) => item.show && item.count > 0);
 
   return (
     <>
@@ -56,7 +55,7 @@ async function My() {
         </div>
       </div>
 
-      <section className="mt-10">
+      <section id="liked" className="mt-10 scroll-mt-16">
         <h2 className="flex items-baseline gap-1.5">
           <span className="font-serif text-[28px] leading-none">Liked</span>
           <span className="text-sm tracking-[-0.04em]">찜한 공연 {liked.length}</span>

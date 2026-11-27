@@ -50,7 +50,7 @@ function ArtistFormBody({ artist, knownGenres, takenIds = [], onCreated }: Props
   const [error, setError] = useState<string>();
   const [image, setImage] = useState(artist?.image ?? '');
   // 새 아티스트 id 는 이름(Spotify 를 고르면 Spotify 이름)으로 자동으로 채운다. 직접 고치면 그 값을 쓴다.
-  const [name, setName] = useState('');
+  const [name, setName] = useState(artist?.name ?? '');
   const [spotifyName, setSpotifyName] = useState('');
   const [manualId, setManualId] = useState<string>();
   const id = manualId ?? uniqueSlug(artistSlug(spotifyName || name), new Set(takenIds));
@@ -85,6 +85,21 @@ function ArtistFormBody({ artist, knownGenres, takenIds = [], onCreated }: Props
   return (
     <form onSubmit={onSubmit} className="mt-6 grid gap-6">
       <Section title="Info">
+        <Field
+          label="Spotify"
+          hint="먼저 연결하면 이름(비어 있을 때)·장르·id 를 채워요. 사이트 아티스트 페이지에 미리듣기가 떠요. 사진·팔로워 수로 동명이인을 확인하세요."
+        >
+          <SpotifyPicker
+            initialId={artist?.spotifyArtistId ?? null}
+            initialImageUrl={artist?.spotifyImageUrl ?? null}
+            getDefaultQuery={() => (document.getElementById('name') as HTMLInputElement | null)?.value ?? ''}
+            onChoose={(chosen) => {
+              setSpotifyName(chosen.name);
+              if (!name.trim()) setName(chosen.name);
+              if (chosen.genres.length) setGenres(chosen.genres.join(', '));
+            }}
+          />
+        </Field>
         {!artist && (
           <Field
             label="id (주소)"
@@ -95,7 +110,7 @@ function ArtistFormBody({ artist, knownGenres, takenIds = [], onCreated }: Props
           </Field>
         )}
         <Field label="이름" htmlFor="name">
-          <Input id="name" name="name" required defaultValue={artist?.name} onChange={(e) => setName(e.target.value)} />
+          <Input id="name" name="name" required value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field
           label="별칭"
@@ -124,17 +139,6 @@ function ArtistFormBody({ artist, knownGenres, takenIds = [], onCreated }: Props
         <Field label="사진" hint="올린 사진이 없으면 연결한 Spotify 프로필 사진을 보여줘요.">
           <ImageUpload folder="artists" shape="square" value={image} onChange={setImage} />
           <input type="hidden" name="image" value={image} />
-        </Field>
-        <Field label="Spotify" hint="연결하면 사이트 아티스트 페이지에 미리듣기가 떠요. 사진·팔로워 수로 동명이인을 확인하세요.">
-          <SpotifyPicker
-            initialId={artist?.spotifyArtistId ?? null}
-            initialImageUrl={artist?.spotifyImageUrl ?? null}
-            getDefaultQuery={() => (document.getElementById('name') as HTMLInputElement | null)?.value ?? ''}
-            onChoose={(chosen) => {
-              setSpotifyName(chosen.name);
-              if (chosen.genres.length) setGenres(chosen.genres.join(', '));
-            }}
-          />
         </Field>
         <div className="flex items-center gap-2">
           <Checkbox id="isEditorPick" name="isEditorPick" defaultChecked={artist?.isEditorPick} />

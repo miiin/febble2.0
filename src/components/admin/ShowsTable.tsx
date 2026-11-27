@@ -58,7 +58,8 @@ const columns: ColumnDef<ShowRow>[] = [
     accessorFn: (row) => (row.lineup.length ? 'linked' : 'none'),
     header: '아티스트',
     filterFn: 'equalsString',
-    enableSorting: false,
+    // 첫 아티스트 이름순. 연결 없는 공연은 오름차순에서 맨 위로 모인다.
+    sortingFn: (a, b) => (a.original.lineup[0] ?? '').localeCompare(b.original.lineup[0] ?? '', 'ko'),
     cell: ({ row }) => {
       const { lineup } = row.original;
       if (!lineup.length) return <span className="text-xs font-medium text-destructive">연결 없음</span>;
@@ -81,7 +82,8 @@ const columns: ColumnDef<ShowRow>[] = [
     accessorFn: (row) => (row.isPublished ? 'published' : 'draft'),
     header: '상태',
     filterFn: 'equalsString',
-    enableSorting: false,
+    // 오름차순: 비공개 → 공개 (매진은 공개 안에서 뒤로)
+    sortingFn: (a, b) => Number(a.original.isPublished) - Number(b.original.isPublished) || Number(a.original.soldOut) - Number(b.original.soldOut),
     cell: ({ row }) => (
       <span className="space-x-1">
         <StatusPill on={row.original.isPublished} />
