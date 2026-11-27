@@ -1,6 +1,6 @@
 'use server';
 
-import { and, eq, notInArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import { updateTag } from 'next/cache';
 import { db } from '@/db';
 import { type ShowDetails, shows, showArtists, stages, ticketVendors, timetableSlots } from '@/db/schema';
@@ -186,6 +186,19 @@ async function ownImage(value: string) {
   const copied = await copyRemoteImage(url);
   check(copied, '이미지 주소에서 이미지를 가져오지 못했어요. 파일로 올려주세요.');
   return copied!;
+}
+
+/** 목록에서 고른 공연을 한꺼번에 공개/비공개로 바꾼다. 공개 시각은 saveShow 와 같은 규칙으로 둔다. */
+export async function setShowsPublished(ids: string[], publish: boolean): Promise<ActionResult & { count?: number }> {
+  await assertAdmin();
+  if (ids.length === 0) return { count: 0 };
+  const rows = await db
+    .update(shows)
+    .set({ isPublished: publish, publishedAt: publish ? sql`coalesce(${shows.publishedAt}, now())` : null })
+    .where(inArray(shows.id, ids))
+    .returning({ id: shows.id });
+  updateTag('catalog');
+  return { count: rows.length };
 }
 
 export async function deleteShow(id: string): Promise<ActionResult> {

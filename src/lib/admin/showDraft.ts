@@ -45,8 +45,8 @@ ${source}에서 공연 정보를 읽어 정해진 형식으로 돌려줘.
 - slug 는 아티스트·페스티벌의 영문 표기를 쓰고, 영문 표기를 모르면 한글을 로마자로 옮긴다 (예: 한로로 → hanroro). 40자 이내.
 - 예매처는 로고나 글자로 판단한다 (예: 인터파크 티켓, 멜론티켓, YES24 티켓). 주소는 자료에 적혀 있을 때만 쓴다.`;
 
-export const artistListText = (artists: { id: string; name: string }[]) =>
-  `아티스트 목록 (id: 이름):\n${artists.map((a) => `${a.id}: ${a.name}`).join('\n')}`;
+export const artistListText = (artists: { id: string; name: string; aliases?: string[] }[]) =>
+  `아티스트 목록 (id: 이름 / 다른 표기):\n${artists.map((a) => `${a.id}: ${a.name}${a.aliases?.length ? ` / ${a.aliases.join(', ')}` : ''}`).join('\n')}`;
 
 // 'ticket.yes24.com' 처럼 https:// 없이 적힌 경우가 많아 붙여준다.
 function vendorUrl(value: string | null) {

@@ -18,12 +18,21 @@ export async function saveArtist(existingId: string | null, formData: FormData):
 
     const values = {
       name,
+      aliases: [
+        ...new Set(
+          text(formData, 'aliases')
+            .split(',')
+            .map((alias) => alias.trim())
+            .filter((alias) => alias && alias !== name),
+        ),
+      ],
       image: optional(text(formData, 'image')),
       genres: text(formData, 'genres')
         .split(',')
         .map((genre) => genre.trim())
         .filter(Boolean),
       bio: text(formData, 'bio'),
+      editorNote: text(formData, 'editorNote'),
       isEditorPick: formData.get('isEditorPick') === 'on',
       spotifyArtistId: optional(text(formData, 'spotifyArtistId')),
       // Spotify 이미지 서버 주소만 받는다.
@@ -48,36 +57,6 @@ export async function saveArtist(existingId: string | null, formData: FormData):
   }
   updateTag('catalog');
   return { id };
-}
-
-/** 장르 정리 화면에서 고른 변경만 적용한다. */
-export async function applyGenreChanges(changes: { artistId: string; genres: string[] }[]): Promise<ActionResult> {
-  await assertAdmin();
-  try {
-    check(Array.isArray(changes) && changes.length > 0, '적용할 변경을 골라주세요');
-    for (const change of changes) {
-      check(
-        typeof change.artistId === 'string' &&
-          Array.isArray(change.genres) &&
-          change.genres.length >= 1 &&
-          change.genres.length <= 3 &&
-          change.genres.every((genre) => typeof genre === 'string' && genre.trim() && genre.length <= 30),
-        '장르는 아티스트당 1~3개로 적어주세요',
-      );
-    }
-    await db.transaction(async (tx) => {
-      for (const change of changes) {
-        await tx
-          .update(artists)
-          .set({ genres: change.genres.map((genre) => genre.trim()) })
-          .where(eq(artists.id, change.artistId));
-      }
-    });
-  } catch (error) {
-    return toResult(error);
-  }
-  updateTag('catalog');
-  return {};
 }
 
 export async function deleteArtist(id: string): Promise<ActionResult> {

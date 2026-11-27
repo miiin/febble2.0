@@ -1,0 +1,1 @@
+ALTER TABLE "artists" ADD COLUMN "aliases" text[] DEFAULT '{}'::text[] NOT NULL;

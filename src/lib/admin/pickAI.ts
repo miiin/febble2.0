@@ -19,6 +19,7 @@ febble Pick 은 에디터가 호마다 공연을 골라 "왜 이 공연인지"�
 규칙:
 - 공연 정보, 아티스트 소개, 에디터 메모에 있는 사실만 쓴다. 신보 발매, 매진, 게스트, 셋리스트, 수상처럼 자료에 없는 사실은 지어내지 않는다.
 - 에디터 메모가 있으면 그 내용을 중심으로 쓴다. 메모는 에디터가 확인한 사실이다.
+- 아티스트의 editorNote 는 에디터가 음악을 듣거나 예전 공연을 보고 남긴 소감이다. 메모 다음으로 중심에 둔다. 다른 공연에서 적은 것일 수 있으니 이번 공연에 대한 이야기처럼 바꿔 쓰지 않는다.
 - 날짜·장소·가격은 카드에 따로 나오므로 나열하지 않는다.
 - 메인 공연은 2~3문장(150자 안팎), 나머지는 1~2문장(80자 안팎).
 - 홍보 문구("놓치지 마세요", "강력 추천"), 느낌표, 이모지, 해시태그는 쓰지 않는다. 담백하게, 왜 이 공연이 볼 만한지 에디터의 시선으로 쓴다.
@@ -32,7 +33,7 @@ export async function draftPickComment(input: { showId: string; isMain: boolean;
 
   const [lineup, examples] = await Promise.all([
     db
-      .select({ name: t.artists.name, genres: t.artists.genres, bio: t.artists.bio })
+      .select({ name: t.artists.name, genres: t.artists.genres, bio: t.artists.bio, editorNote: t.artists.editorNote })
       .from(t.showArtists)
       .innerJoin(t.artists, eq(t.artists.id, t.showArtists.artistId))
       .where(eq(t.showArtists.showId, show.id))
@@ -45,7 +46,14 @@ export async function draftPickComment(input: { showId: string; isMain: boolean;
       .limit(EXAMPLE_LIMIT),
   ]);
   // 라인업이 많은 페스티벌은 앞쪽 일부만 준다.
-  const artists = lineup.slice(0, 12).map((a) => ({ name: a.name, genres: a.genres, ...(a.bio && { bio: a.bio.slice(0, 200) }) }));
+  const artists = lineup
+    .slice(0, 12)
+    .map((a) => ({
+      name: a.name,
+      genres: a.genres,
+      ...(a.bio && { bio: a.bio.slice(0, 200) }),
+      ...(a.editorNote && { editorNote: a.editorNote.slice(0, 500) }),
+    }));
   const exampleText = (isMain: boolean) =>
     examples
       .filter((e) => e.isMain === isMain)

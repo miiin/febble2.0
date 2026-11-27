@@ -96,10 +96,10 @@ export async function addKopisShows(ids: number[], options: { newArtists: string
   return { added, createdArtists, failed };
 }
 
-/** 이름만으로 아티스트를 만든다. id 는 이름으로 자동, Spotify 에 이름이 똑같은 아티스트가 있으면 연결한다. 만든 수를 돌려준다. */
+/** 이름만으로 아티스트를 만든다. id 는 이름으로 자동, Spotify 에 이름이 똑같은 아티스트가 있으면 연결하고 장르도 가져온다. 만든 수를 돌려준다. */
 async function createArtists(names: string[]) {
   const existing = await listArtistOptions();
-  const knownNames = new Set(existing.map((artist) => normalize(artist.name)));
+  const knownNames = new Set(existing.flatMap((artist) => [artist.name, ...artist.aliases].map(normalize)));
   const takenIds = new Set(existing.map((artist) => artist.id));
   let created = 0;
   for (const raw of names) {
@@ -110,7 +110,9 @@ async function createArtists(names: string[]) {
     const spotify = (await searchArtists(name, 5).catch(() => [])).find((artist) => normalize(artist.name) === normalize(name));
     const id = uniqueSlug(artistSlug(name) || 'artist', takenIds);
     takenIds.add(id);
-    await db.insert(artistsTable).values({ id, name, spotifyArtistId: spotify?.id ?? null, spotifyImageUrl: spotify?.imageLarge ?? null });
+    await db
+      .insert(artistsTable)
+      .values({ id, name, genres: spotify?.genres ?? [], spotifyArtistId: spotify?.id ?? null, spotifyImageUrl: spotify?.imageLarge ?? null });
     created++;
   }
   return created;

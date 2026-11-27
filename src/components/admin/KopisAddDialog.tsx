@@ -65,7 +65,17 @@ function Body({ items, isPending, onConfirm }: { items: KopisAddPreview[]; isPen
             )}
             {item.unknown.length > 0 && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-xs text-muted-foreground">새 아티스트</span>
+                {/* 이 공연의 새 아티스트를 한 번에 켜고 끈다. 같은 이름이 다른 공연에도 있으면 같이 바뀐다. */}
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Checkbox
+                    aria-label={`${item.title} 새 아티스트 모두`}
+                    checked={item.unknown.every((name) => checked[normalize(name)])}
+                    onCheckedChange={(on) =>
+                      setChecked((prev) => ({ ...prev, ...Object.fromEntries(item.unknown.map((name) => [normalize(name), on === true])) }))
+                    }
+                  />
+                  새 아티스트
+                </label>
                 {item.unknown.map((name) => (
                   <label key={name} className="flex items-center gap-1.5 text-xs">
                     <Checkbox

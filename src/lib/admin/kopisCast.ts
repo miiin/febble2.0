@@ -42,8 +42,10 @@ const nameVariants = (name: string) => {
 export type CastMatch = { artistIds: string[]; unknown: string[] };
 
 /** 출연진 이름을 등록된 아티스트와 맞춘다. 공연 이름에 아티스트 이름이 들어 있어도 라인업에 넣는다 (출연진 다음 순서). */
-export function matchCast(cast: string | null, title: string, artists: { id: string; name: string }[]): CastMatch {
-  const byName = new Map(artists.map((artist) => [normalize(artist.name), artist.id]));
+export function matchCast(cast: string | null, title: string, artists: { id: string; name: string; aliases?: string[] }[]): CastMatch {
+  // 이름과 별칭 모두로 찾는다 (KOPIS 는 한글 표기·본명으로 적기도 한다).
+  const namesOf = (artist: (typeof artists)[number]) => [artist.name, ...(artist.aliases ?? [])].map(normalize);
+  const byName = new Map(artists.flatMap((artist) => namesOf(artist).map((name) => [name, artist.id] as const)));
   const artistIds: string[] = [];
   const unknown: string[] = [];
   for (const name of castNames(cast)) {
@@ -52,6 +54,6 @@ export function matchCast(cast: string | null, title: string, artists: { id: str
     else unknown.push(name);
   }
   const titleText = normalize(title);
-  for (const artist of artists) if (normalize(artist.name).length >= 2 && titleText.includes(normalize(artist.name))) artistIds.push(artist.id);
+  for (const artist of artists) if (namesOf(artist).some((name) => name.length >= 2 && titleText.includes(name))) artistIds.push(artist.id);
   return { artistIds: [...new Set(artistIds)], unknown };
 }

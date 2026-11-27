@@ -44,8 +44,15 @@ export async function listShows() {
       venue: t.shows.venue,
       isPublished: t.shows.isPublished,
       soldOut: t.shows.soldOut,
+      // 라인업에 연결된 아티스트 이름 (순서대로). 조인이 있어야 drizzle 이 sql 안의 컬럼에 테이블 이름을 붙인다.
+      lineup: sql<
+        string[]
+      >`coalesce(array_agg(${t.artists.name} ORDER BY ${t.showArtists.position}) FILTER (WHERE ${t.artists.id} IS NOT NULL), '{}')`,
     })
     .from(t.shows)
+    .leftJoin(t.showArtists, eq(t.showArtists.showId, t.shows.id))
+    .leftJoin(t.artists, eq(t.artists.id, t.showArtists.artistId))
+    .groupBy(t.shows.id)
     .orderBy(desc(t.shows.startDate));
 }
 
@@ -103,7 +110,7 @@ export type ShowForEdit = NonNullable<Awaited<ReturnType<typeof getShowForEdit>>
 
 /** 선택 목록용 (라인업·Pick) */
 export async function listArtistOptions() {
-  return db.select({ id: t.artists.id, name: t.artists.name }).from(t.artists).orderBy(asc(t.artists.name));
+  return db.select({ id: t.artists.id, name: t.artists.name, aliases: t.artists.aliases }).from(t.artists).orderBy(asc(t.artists.name));
 }
 
 export async function listShowOptions() {
@@ -164,10 +171,10 @@ export async function countKopisReports() {
 /** KOPIS 공연과 febble 의 관련을 찾는 데 쓰는 아티스트 이름·공연장 */
 export async function getRelevanceHints() {
   const [artistRows, venueRows] = await Promise.all([
-    db.select({ name: t.artists.name }).from(t.artists),
+    db.select({ name: t.artists.name, aliases: t.artists.aliases }).from(t.artists),
     db.selectDistinct({ venue: t.shows.venue }).from(t.shows),
   ]);
-  return { artists: artistRows.map((row) => row.name), venues: venueRows.map((row) => row.venue) };
+  return { artists: artistRows.flatMap((row) => [row.name, ...row.aliases]), venues: venueRows.map((row) => row.venue) };
 }
 
 export async function getDashboardCounts() {

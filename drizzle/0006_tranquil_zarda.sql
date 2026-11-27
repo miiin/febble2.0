@@ -1,0 +1,1 @@
+ALTER TABLE "artists" ADD COLUMN "editor_note" text DEFAULT '' NOT NULL;

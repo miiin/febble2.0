@@ -27,6 +27,7 @@ async function loadCatalog() {
       .select({
         id: t.artists.id,
         name: t.artists.name,
+        aliases: t.artists.aliases,
         image: t.artists.image,
         genres: t.artists.genres,
         bio: t.artists.bio,

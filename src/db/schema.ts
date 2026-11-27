@@ -74,12 +74,19 @@ export const sessions = pgTable('sessions', {
 export const artists = pgTable('artists', {
   id: text('id').primaryKey(), // slug, 예: 'silica-gel'
   name: text('name').notNull(),
+  /** 다른 표기 (한글/영문 표기, 본명 등). 화면에는 name 만 보여주고, 검색·KOPIS 출연진 매칭에 쓴다. */
+  aliases: text('aliases')
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   image: text('image'),
   genres: text('genres')
     .array()
     .notNull()
     .default(sql`'{}'::text[]`),
   bio: text('bio').notNull().default(''),
+  /** 에디터가 들어보거나 공연을 보고 남긴 소감. 사이트에는 내보내지 않고 Pick 코멘트 초안 재료로 쓴다. */
+  editorNote: text('editor_note').notNull().default(''),
   /** 비로그인 For you 배너에서 일정 있는 아티스트가 모자라면 이 아티스트로 채운다. */
   isEditorPick: boolean('is_editor_pick').notNull().default(false),
   /** 있으면 미리듣기 임베드를 띄운다. */
@@ -287,6 +294,8 @@ export const slotPicks = pgTable(
 export const reportStatus = pgEnum('report_status', ['pending', 'added', 'rejected']);
 /** user: 사이트 제보하기, kopis: 공연예술통합전산망에서 가져온 공연 */
 export const reportSource = pgEnum('report_source', ['user', 'kopis']);
+/** KOPIS 공연이 febble 에 올릴 만한지 AI 가 본 판정 */
+export const reportFit = pgEnum('report_fit', ['fit', 'unsure', 'unfit']);
 
 export const reports = pgTable(
   'reports',
@@ -307,6 +316,9 @@ export const reports = pgTable(
     poster: text('poster'),
     /** KOPIS 출연진 문구 그대로. null 이면 아직 상세를 받지 않았고, '' 이면 KOPIS 에 출연진이 없다. */
     cast: text('cast'),
+    /** null 이면 아직 판정하지 않았다. */
+    fit: reportFit('fit'),
+    fitReason: text('fit_reason'),
     createdAt: createdAt(),
   },
   (t) => [index('reports_status_idx').on(t.status, t.createdAt)],

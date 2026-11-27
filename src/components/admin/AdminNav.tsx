@@ -9,7 +9,6 @@ const NAV = [
   { segment: null, href: '/admin', label: '대시보드' },
   { segment: 'shows', href: '/admin/shows', label: '공연' },
   { segment: 'artists', href: '/admin/artists', label: '아티스트' },
-  { segment: 'genres', href: '/admin/genres', label: '장르' },
   { segment: 'picks', href: '/admin/picks', label: 'Pick' },
   { segment: 'reports', href: '/admin/reports', label: '제보' },
 ];

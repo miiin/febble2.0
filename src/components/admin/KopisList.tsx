@@ -26,7 +26,12 @@ export type KopisRow = {
   status: 'pending' | 'added' | 'rejected';
   artistMatches: string[];
   venueMatches: string[];
+  /** AI 판정. null 이면 아직 판정하지 않음 */
+  fit: 'fit' | 'unsure' | 'unfit' | null;
+  fitReason: string | null;
 };
+
+const FIT_LABEL = { fit: '대상', unsure: '애매', unfit: '대상 아님' } as const;
 
 // 처리 전 공연은 골라서 한꺼번에 공연으로 추가(확인 창에서 새 아티스트·공개 여부 선택)하거나 반려할 수 있다.
 export default function KopisList({ rows }: { rows: KopisRow[] }) {
@@ -117,8 +122,14 @@ export default function KopisList({ rows }: { rows: KopisRow[] }) {
               )}
               <p className="mt-1 text-xs text-muted-foreground">{[row.date, row.venue].filter(Boolean).join(' · ')}</p>
               {row.cast && <p className="mt-0.5 text-xs">출연 · {row.cast}</p>}
-              {row.artistMatches.length + row.venueMatches.length > 0 && (
+              {row.artistMatches.length + row.venueMatches.length > 0 || row.fit ? (
                 <div className="mt-1.5 flex flex-wrap gap-1">
+                  {row.fit && (
+                    <Badge variant={row.fit === 'fit' ? 'default' : row.fit === 'unfit' ? 'secondary' : 'outline'}>
+                      AI {FIT_LABEL[row.fit]}
+                      {row.fitReason && ` · ${row.fitReason}`}
+                    </Badge>
+                  )}
                   {row.artistMatches.map((name) => (
                     <Badge key={name} className="bg-brand-yellow text-black">
                       아티스트 · {name}
@@ -130,7 +141,7 @@ export default function KopisList({ rows }: { rows: KopisRow[] }) {
                     </Badge>
                   ))}
                 </div>
-              )}
+              ) : null}
             </div>
             <div className="flex flex-col items-end gap-2">
               <ReportStatusSelect id={row.id} status={row.status} />

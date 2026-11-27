@@ -3,6 +3,8 @@
 export type Artist = {
   id: string;
   name: string;
+  /** 다른 표기. 검색에만 쓰고 화면에는 보여주지 않는다. */
+  aliases?: string[];
   image?: string;
   genres: string[];
   bio: string;

@@ -43,6 +43,27 @@
       "when": 1795665316724,
       "tag": "0005_clammy_lockjaw",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795748968060,
+      "tag": "0006_tranquil_zarda",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795749778329,
+      "tag": "0007_salty_surge",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795761979113,
+      "tag": "0008_loose_alex_power",
+      "breakpoints": true
     }
   ]
 }

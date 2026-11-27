@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import KopisCastButton from '@/components/admin/KopisCastButton';
+import KopisFitButton from '@/components/admin/KopisFitButton';
 import KopisImportButton from '@/components/admin/KopisImportButton';
 import KopisList from '@/components/admin/KopisList';
 import ReportStatusSelect from '@/components/admin/ReportStatusSelect';
@@ -17,12 +18,23 @@ const KOPIS_STATUS = [
   ['rejected', '반려'],
 ] as const;
 type KopisStatus = (typeof KOPIS_STATUS)[number][0];
+// AI 판정으로 처리 전 목록을 거른다.
+const FIT_FILTER = [
+  ['all', '전체'],
+  ['fit', '대상'],
+  ['unsure', '애매'],
+  ['unfit', '대상 아님'],
+  ['none', '판정 전'],
+] as const;
+type FitFilter = (typeof FIT_FILTER)[number][0];
+const FIT_ORDER = { fit: 0, unsure: 1, none: 1, unfit: 2 } as const;
 
 export default async function AdminReportsPage({ searchParams }: PageProps<'/admin/reports'>) {
   await requireAdmin();
   const params = await searchParams;
   const tab = params.tab === 'user' ? 'user' : 'kopis';
   const status = KOPIS_STATUS.find(([key]) => key === params.status)?.[0] ?? 'pending';
+  const fit = FIT_FILTER.find(([key]) => key === params.fit)?.[0] ?? 'all';
 
   return (
     <>
@@ -43,7 +55,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps<'/adm
           </Link>
         ))}
       </nav>
-      {tab === 'user' ? <UserReports /> : <KopisReports status={status} />}
+      {tab === 'user' ? <UserReports /> : <KopisReports status={status} fit={fit} />}
     </>
   );
 }
@@ -90,7 +102,7 @@ async function UserReports() {
 // 공백·대소문자를 무시하고 비교한다.
 const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, '');
 
-async function KopisReports({ status }: { status: KopisStatus }) {
+async function KopisReports({ status, fit }: { status: KopisStatus; fit: FitFilter }) {
   const [reports, counts, hints] = await Promise.all([listKopisReports(status), countKopisReports(), getRelevanceHints()]);
   const artists = hints.artists.filter((name) => normalize(name).length >= 2);
   // febble 공연장은 "공연장, 도시" 로 적으므로 앞부분만 본다.
@@ -103,10 +115,17 @@ async function KopisReports({ status }: { status: KopisStatus }) {
       artistMatches: artists.filter((name) => normalize(`${report.title} ${report.cast ?? ''}`).includes(normalize(name))),
       venueMatches: venues.filter((venue) => normalize(report.venue ?? '').includes(normalize(venue))),
     }))
-    // 아티스트가 겹치는 공연 → 공연장만 겹치는 공연 → 나머지. 같은 순위 안에서는 날짜순 (안정 정렬).
-    .map((row) => ({ ...row, rank: row.artistMatches.length > 0 ? 2 : row.venueMatches.length > 0 ? 1 : 0 }))
-    .sort((a, b) => b.rank - a.rank);
+    // 아티스트가 겹치는 공연이 맨 위, 그다음 AI 판정(대상 → 애매·판정 전 → 대상 아님), 그 안에서 공연장이 겹치는 공연 → 나머지.
+    // 같은 순위 안에서는 날짜순 (안정 정렬).
+    .map((row) => ({
+      ...row,
+      rank: row.artistMatches.length > 0 ? 2 : row.venueMatches.length > 0 ? 1 : 0,
+      fit: row.report.fit ?? ('none' as const),
+    }))
+    .sort((a, b) => Number(b.rank === 2) - Number(a.rank === 2) || FIT_ORDER[a.fit] - FIT_ORDER[b.fit] || b.rank - a.rank);
   const related = rows.filter((row) => row.rank > 0).length;
+  const fitCounts = Object.fromEntries(FIT_FILTER.map(([key]) => [key, key === 'all' ? rows.length : rows.filter((row) => row.fit === key).length]));
+  const shown = fit === 'all' ? rows : rows.filter((row) => row.fit === fit);
 
   return (
     <>
@@ -115,10 +134,11 @@ async function KopisReports({ status }: { status: KopisStatus }) {
           KOPIS(공연예술통합전산망)에 등록된 앞으로 60일의 대중음악 공연이에요. {KOPIS_STATUS.find(([key]) => key === status)![1]} {reports.length}건
           중 관련 {related}건.
           <br />
-          등록된 아티스트가 나오는 공연, febble 에 올린 적 있는 공연장의 공연 순으로 위에 보여줘요. 여러 개를 골라 공연으로 추가(출연진으로 라인업·새
-          아티스트까지)하거나 반려할 수 있어요.
+          등록된 아티스트가 나오는 공연, AI 가 대상으로 본 공연, febble 에 올린 적 있는 공연장의 공연 순으로 위에 보여줘요. 여러 개를 골라 공연으로
+          추가(출연진으로 라인업·새 아티스트까지)하거나 반려할 수 있어요.
         </p>
         <div className="flex shrink-0 gap-2">
+          {status === 'pending' && <KopisFitButton missing={fitCounts.none} />}
           {status === 'pending' && <KopisCastButton missing={reports.filter((report) => report.cast === null).length} />}
           <KopisImportButton />
         </div>
@@ -137,6 +157,19 @@ async function KopisReports({ status }: { status: KopisStatus }) {
           </Link>
         ))}
       </nav>
+      {status === 'pending' && reports.length > 0 && (
+        <nav className="mt-2 flex gap-1 text-xs">
+          {FIT_FILTER.map(([key, label]) => (
+            <Link
+              key={key}
+              href={key === 'all' ? '/admin/reports' : `/admin/reports?fit=${key}`}
+              className={cn('rounded-md px-2.5 py-1', fit === key ? 'bg-accent font-medium' : 'text-muted-foreground hover:bg-accent')}
+            >
+              AI {label} {fitCounts[key]}
+            </Link>
+          ))}
+        </nav>
+      )}
       {reports.length === 0 &&
         (status === 'pending' ? (
           <p className="mt-10 text-center text-sm">처리할 공연이 없어요. KOPIS에서 가져와 주세요.</p>
@@ -144,7 +177,7 @@ async function KopisReports({ status }: { status: KopisStatus }) {
           <p className="mt-10 text-center text-sm">아직 없어요.</p>
         ))}
       <KopisList
-        rows={rows.slice(0, KOPIS_LIMIT).map(({ report, artistMatches, venueMatches }) => ({
+        rows={shown.slice(0, KOPIS_LIMIT).map(({ report, artistMatches, venueMatches }) => ({
           id: report.id,
           externalId: report.externalId,
           title: report.title,
@@ -155,11 +188,13 @@ async function KopisReports({ status }: { status: KopisStatus }) {
           status: report.status,
           artistMatches,
           venueMatches,
+          fit: report.fit,
+          fitReason: report.fitReason,
         }))}
       />
-      {rows.length > KOPIS_LIMIT && (
+      {shown.length > KOPIS_LIMIT && (
         <p className="mt-3 text-center text-xs text-muted-foreground">
-          {rows.length}건 중 {KOPIS_LIMIT}건만 보여줘요. 위에서부터 처리하면 다음 공연이 올라와요.
+          {shown.length}건 중 {KOPIS_LIMIT}건만 보여줘요. 위에서부터 처리하면 다음 공연이 올라와요.
         </p>
       )}
     </>

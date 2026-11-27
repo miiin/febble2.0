@@ -7,6 +7,7 @@ import { db } from '@/db';
 import { reports } from '@/db/schema';
 import { assertAdmin } from '@/lib/admin/guard';
 import { CAST_BATCH, fillCast } from '@/lib/admin/kopisCast';
+import { countUnjudged, judgeKopisFit } from '@/lib/admin/kopisFit';
 import { runKopisImport } from '@/lib/admin/kopisImport';
 
 export async function importFromKopis(): Promise<{ added?: number; total?: number; error?: string }> {
@@ -31,4 +32,18 @@ export async function fillKopisCast(): Promise<{ filled: number; remaining: numb
   const remaining = await db.$count(reports, pending);
   revalidatePath('/admin/reports');
   return { filled, remaining, error: rows.length && !filled ? 'KOPIS 에서 출연진을 받지 못했어요. 잠시 뒤 다시 시도해주세요.' : undefined };
+}
+
+/** 처리 전 KOPIS 공연 중 아직 판정하지 않은 공연을 날짜순으로 FIT_BATCH 개 AI 로 판정한다. */
+export async function judgeKopisPending(): Promise<{ judged: number; remaining: number; error?: string }> {
+  await assertAdmin();
+  let judged = 0;
+  let error;
+  try {
+    judged = await judgeKopisFit();
+  } catch (e) {
+    error = e instanceof Error ? e.message : '판정하지 못했어요';
+  }
+  revalidatePath('/admin/reports');
+  return { judged, remaining: await countUnjudged(), error };
 }
